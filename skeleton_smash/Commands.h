@@ -78,6 +78,7 @@ public:
   virtual ~QuitCommand() {}
   void execute() override;
 };
+
 enum status {forground, background, stopped};
 
 class JobsList {
@@ -102,8 +103,8 @@ class JobsList {
     int Amount;
  // TODO: Add your data members
  public:
-  JobsList();
-  ~JobsList();
+  JobsList(): FGround(), BGround(), Stopped(),Amount(0){}
+  ~JobsList() = default;
   void addJob(Command* cmd, bool isStopped = false);
   void printJobsList();
   void killAllJobs();
@@ -112,6 +113,7 @@ class JobsList {
   void removeJobById(int jobId);
   JobEntry * getLastJob(int* lastJobId);
   JobEntry *getLastStoppedJob(int *jobId);
+  int getNextPID ();
   // TODO: Add extra methods or modify exisitng ones as needed
 };
 
