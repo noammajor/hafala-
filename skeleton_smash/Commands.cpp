@@ -83,12 +83,24 @@ void _removeBackgroundSign(char* cmd_line) {
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
     if (isStopped)
-        Stopped.push_back()
+        Stopped.push_back(JobEntry(stopped,  getNextPID()));
+    else
+        Stopped.push_back(JobEntry(background,  getNextPID()));
 }
 
 void JobsList::printJobsList()
 {
-
+    JobEntry bgJob = BGround.front();
+    for (JobEntry bgJob: BGround)
+    {
+        for (JobEntry stoppedJob: Stopped)
+        {
+            if (stoppedJob.getJobId() < bgJob.getJobId())
+                stoppedJob.printJob();
+            else
+                bgJob.printJob();
+        }
+    }
 }
 
 void JobsList::killAllJobs()
@@ -163,30 +175,29 @@ void SmallShell::executeCommand(const char *cmd_line) {
   // cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
-    JobsList::JobEntry::JobEntry(status starting)
+    JobsList::JobEntry::JobEntry(status starting, int id)
     {
-    begin=time();
-    //Job_ID
+    begin = time(NULL);
+    currentStatus = starting;
+    Job_ID = id;
     }
-    JobsList::JobEntry::~JobEntry();
+
     void JobsList::JobEntry::settime(time_t time)
     {
         this->begin=time;
     }
+
     time_t JobsList::JobEntry::getcurrenttime()
     {
-        return difftime(this->begin, time());
+        return difftime(this->begin, time(NULL));
     }
+
     int JobsList::JobEntry::getJobId()
     {
         return this->Job_ID;
     }
-    int JobsList::JobEntry::getPID()
-    {
-        return this->PID;
-    }
+
     void JobsList::JobEntry::changestatus(status curr)
     {
-        this->currentstatus=curr;
+        this->currentStatus=curr;
     }
-};

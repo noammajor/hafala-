@@ -86,11 +86,11 @@ class JobsList {
   class JobEntry{
   private:
       time_t begin;
-      status currentstatus;
+      status currentStatus;
       int Job_ID;
   public:
-      JobEntry(time_t time(),status starting,int Job);
-      ~JobEntry();
+      JobEntry(status starting, int id);
+      ~JobEntry() = default;
       void settime(time_t time);
       time_t getcurrenttime();
       int getJobId();
