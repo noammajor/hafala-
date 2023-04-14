@@ -2,6 +2,7 @@
 #define SMASH_COMMAND_H_
 
 #include <vector>
+#include <time.h>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
@@ -77,13 +78,24 @@ public:
   virtual ~QuitCommand() {}
   void execute() override;
 };
-
+enum status ={forground, background, stopped};
 
 class JobsList {
  public:
-  class JobEntry {
-   // TODO: Add your data members
+  class JobEntry{
+  private:
+      time_t begin;
+      status currentstatus;
+      int Job_ID;
+      int PID;
+  public:
+      JobEntry(time_t time,status starting,int Job,int pid);
+      ~JobEntry();
   };
+    std::vector<JobEntry> FGround;
+    std::vector<JobEntry> BGround;
+    std::vector<JobEntry> Stopped;
+    int Amount;
  // TODO: Add your data members
  public:
   JobsList();
