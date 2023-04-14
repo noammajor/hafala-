@@ -88,8 +88,9 @@ class JobsList {
       time_t begin;
       status currentStatus;
       int Job_ID;
+      std::string name;
   public:
-      JobEntry(status starting, int id);
+      JobEntry(status starting, int id,std::string name);
       ~JobEntry() = default;
       void settime(time_t time);
       time_t getcurrenttime();
@@ -185,7 +186,8 @@ class KillCommand : public BuiltInCommand {
 class SmallShell {
  private:
   // TODO: Add your data members
-  SmallShell();
+  std::string name;
+  SmallShell(): name(smash);
  public:
   Command *CreateCommand(const char* cmd_line);
   SmallShell(SmallShell const&)      = delete; // disable copy ctor
@@ -193,11 +195,15 @@ class SmallShell {
   static SmallShell& getInstance() // make SmallShell singleton
   {
     static SmallShell instance; // Guaranteed to be destroyed.
-    // Instantiated on first use.
+    if(instance== nullptr)
+    {
+        instance=SmallShell::SmallShell();
+    }// Instantiated on first use.
     return instance;
   }
   ~SmallShell();
   void executeCommand(const char* cmd_line);
+  void changename(std::string namenew);
   // TODO: add extra methods as needed
 };
 

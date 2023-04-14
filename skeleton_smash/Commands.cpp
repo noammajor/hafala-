@@ -105,12 +105,13 @@ void JobsList::printJobsList()
 
 void JobsList::killAllJobs()
 {
-
+    BGround.clear();
+    Stopped.clear();
 }
 
 void JobsList::removeFinishedJobs()
-{
-
+{///////////////////
+    for()
 }
 
 JobsList::JobEntry * JobsList::getJobById(int jobId)
@@ -120,6 +121,7 @@ JobsList::JobEntry * JobsList::getJobById(int jobId)
 
 void JobsList::removeJobById(int jobId)
 {
+
 
 }
 
@@ -143,7 +145,10 @@ SmallShell::SmallShell() {
 SmallShell::~SmallShell() {
 // TODO: add your implementation
 }
-
+void ChmodCommand::execute() override
+{
+getInstance()->changename(newname);
+}
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
@@ -175,29 +180,26 @@ void SmallShell::executeCommand(const char *cmd_line) {
   // cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
-    JobsList::JobEntry::JobEntry(status starting, int id)
+    JobsList::JobEntry::JobEntry(status starting)
     {
-    begin = time(NULL);
-    currentStatus = starting;
-    Job_ID = id;
+    begin=time();
+    //Job_ID
     }
-
+    JobsList::JobEntry::~JobEntry();
     void JobsList::JobEntry::settime(time_t time)
     {
         this->begin=time;
     }
-
     time_t JobsList::JobEntry::getcurrenttime()
     {
-        return difftime(this->begin, time(NULL));
+        return difftime(this->begin, time());
     }
-
     int JobsList::JobEntry::getJobId()
     {
         return this->Job_ID;
     }
-
     void JobsList::JobEntry::changestatus(status curr)
     {
-        this->currentStatus=curr;
+        this->currentstatus=curr;
     }
+};
