@@ -96,6 +96,7 @@ class JobsList {
       int getJobId();
       int getPID();
       void changestatus(status curr);
+      void printJob();
   };
     std::vector<JobEntry> FGround;
     std::vector<JobEntry> BGround;
