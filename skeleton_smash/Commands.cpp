@@ -118,3 +118,30 @@ void SmallShell::executeCommand(const char *cmd_line) {
   // cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
+    JobsList::JobEntry::JobEntry(status starting)
+    {
+    begin=time();
+    //Job_ID
+    }
+    JobsList::JobEntry::~JobEntry();
+    void JobsList::JobEntry::settime(time_t time)
+    {
+        this->begin=time;
+    }
+    time_t JobsList::JobEntry::getcurrenttime()
+    {
+        return difftime(this->begin, time());
+    }
+    int JobsList::JobEntry::getJobId()
+    {
+        return this->Job_ID;
+    }
+    int JobsList::JobEntry::getPID()
+    {
+        return this->PID;
+    }
+    void JobsList::JobEntry::changestatus(status curr)
+    {
+        this->currentstatus=curr;
+    }
+};

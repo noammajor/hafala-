@@ -78,7 +78,7 @@ public:
   virtual ~QuitCommand() {}
   void execute() override;
 };
-enum status ={forground, background, stopped};
+enum status {forground, background, stopped};
 
 class JobsList {
  public:
@@ -87,10 +87,14 @@ class JobsList {
       time_t begin;
       status currentstatus;
       int Job_ID;
-      int PID;
   public:
-      JobEntry(time_t time,status starting,int Job,int pid);
+      JobEntry(time_t time(),status starting,int Job);
       ~JobEntry();
+      void settime(time_t time);
+      time_t getcurrenttime();
+      int getJobId();
+      int getPID();
+      void changestatus(status curr);
   };
     std::vector<JobEntry> FGround;
     std::vector<JobEntry> BGround;
