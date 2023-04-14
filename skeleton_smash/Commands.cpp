@@ -116,13 +116,39 @@ void JobsList::removeFinishedJobs()
 
 JobsList::JobEntry * JobsList::getJobById(int jobId)
 {
-
+    for (JobEntry job : BGround)
+    {
+        if (job.getJobId() == jobId)
+            return &job;
+        if (job.getJobId() > jobId)
+            break;
+    }
+    for (JobEntry job : Stopped)
+    {
+        if (job.getJobId() == jobId)
+            return &job;
+        if (job.getJobId() > jobId)
+            return nullptr;
+    }
 }
 
 void JobsList::removeJobById(int jobId)
 {
-
-
+    for (int i = 0; i < BGround.size() ; i++)
+    {
+        if (BGround[i].getJobId() == jobId)
+        {
+            BGround.erase(BGround.begin() + i);
+            return;
+        }
+    }
+    for (int j = 0; j < Stopped.size() ; j++)
+    {
+        if (Stopped[j].getJobId() == jobId) {
+            Stopped.erase(Stopped.begin() + j);
+            return;
+        }
+    }
 }
 
 JobsList::JobEntry * JobsList::getLastJob(int* lastJobId)
@@ -180,26 +206,37 @@ void SmallShell::executeCommand(const char *cmd_line) {
   // cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
-    JobsList::JobEntry::JobEntry(status starting)
-    {
-    begin=time();
-    //Job_ID
-    }
-    JobsList::JobEntry::~JobEntry();
-    void JobsList::JobEntry::settime(time_t time)
-    {
-        this->begin=time;
-    }
-    time_t JobsList::JobEntry::getcurrenttime()
-    {
-        return difftime(this->begin, time());
-    }
-    int JobsList::JobEntry::getJobId()
-    {
-        return this->Job_ID;
-    }
-    void JobsList::JobEntry::changestatus(status curr)
-    {
-        this->currentstatus=curr;
-    }
-};
+
+JobsList::JobEntry::JobEntry(status starting, int id)
+{
+    begin = time(NULL);
+    currentStatus = starting;
+    Job_ID = id;
+}
+
+void JobsList::JobEntry::settime(time_t time)
+{
+    this->begin=time;
+}
+
+time_t JobsList::JobEntry::getcurrenttime()
+{
+    return difftime(this->begin, time(NULL));
+}
+
+int JobsList::JobEntry::getJobId()
+{
+    return this->Job_ID;
+}
+
+void JobsList::JobEntry::changestatus(status curr)
+{
+    this->currentStatus=curr;
+}
+
+void JobsList::JobEntry::printJob()
+{
+    cout << "[" << Job_ID << "]"; ////////////////continue
+    if (currentStatus == stopped)
+        cout << " (stopped)";
+}
