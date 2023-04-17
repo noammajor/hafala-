@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 #include <iomanip>
 #include "Commands.h"
+#include <cstring>
 
 using namespace std;
 
@@ -160,15 +161,67 @@ JobsList::JobEntry * JobsList::getLastStoppedJob(int *jobId)
 {
 
 }
+private:
+// TODO: Add your data members
+std::string name;
+SmallShell(): name(smash);
+public:
+Command *CreateCommand(const char* cmd_line);
+void executeCommand(const char* cmd_line);
+void changename(std::string namenew);
+// TODO: add extra methods as needed
+};
 
+SmallShell::SmallShell()
+{
+    static SmallShell& getInstance() // make SmallShell singleton
+    {
+        static SmallShell instance; // Guaranteed to be destroyed.
+        if(instance== nullptr)
+        {
+            instance=SmallShell::SmallShell();
+        }// Instantiated on first use.
+        return instance;
+    }
 
-
-
-SmallShell::SmallShell() {
 // TODO: add your implementation
 }
+int SmallShell::listsize() const
+{
+    return pastCd.size();
+}
+void SmallShell::changename(std::string namenew)
+{
+    if(namenew== nullptr)
+    {
+        this->nameprompt= "smash> " ;
+        return;
+    }
+    else
+    {
+        this->nameprompt=namenew;
+        return;
+    }
+}
+std::string SmallShell::returnprevois() const
+{
+    return this->pastCd.back();
+}
+void SmallShell::addcd(std::string name)
+{
+    pastCd.push_back(name);
+}
+void SmallShell::removecd()
+{
+    pastCd.pop_back();
+}
+std::string SmallShell::get_name() const
+{
+    this->nameprompt;
+}
 
-SmallShell::~SmallShell() {
+SmallShell::~SmallShell()
+{
 // TODO: add your implementation
 }
 void ChmodCommand::execute() override
@@ -239,4 +292,73 @@ void JobsList::JobEntry::printJob()
     cout << "[" << Job_ID << "]"; ////////////////continue
     if (currentStatus == stopped)
         cout << " (stopped)";
+}
+
+void BuiltInCommand::ChmodCommand::execute() override
+{
+   std::string work;
+   work=newname;
+   int counter=0, count=0;
+   for(int i=0;i<work.len()<i++)
+    {
+       if(work[i]!=" " && counter<2)
+       {
+           work[count];
+           count++;
+       }
+       if(work[i]!= " " && i>0)
+        {
+           if(work[i-1]==" ")
+               counter++;
+        }
+    }
+   work[count]='/0';
+   std::string final=work;
+   if(strlen(final)>8)
+    {
+    changename(final.substr(8,strlen(final)));
+    }
+}
+
+void BuiltInCommand::ShowPidCommand::execute() override
+{
+    cout<<"smash pid is "<< getpid();
+}
+
+void BuiltInCommand::GetCurrDirCommand::execute() override
+{
+    std::string cwd = getcwd();
+    cout<<cwd;
+}
+
+void BuiltInCommand::ChangeDirCommand::execute() override
+{
+    std:string cut;
+    ///later - need to check for more then one arg
+    if(cut=='-')
+    {
+        if(smash.listsize()>0)
+        {
+            if(chdir(smash.returnprevois())==-1)
+                {
+                //error look at later
+                }
+            smash.removecd();
+        }
+        else
+            cout<<"smash error: cd: OLDPWD not set";
+    }
+    else if
+    {
+        std::string cwd = getcwd();
+        smash.addcd(cwd);
+        if(chdir(smash.returnprevois())==-1)
+            {
+                //error look at later
+            }
+
+    }
+
+
+
 }
