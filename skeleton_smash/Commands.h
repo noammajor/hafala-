@@ -1,6 +1,6 @@
 #ifndef SMASH_COMMAND_H_
 #define SMASH_COMMAND_H_
-
+#include <list>
 #include <vector>
 #include <time.h>
 
@@ -50,8 +50,10 @@ class RedirectionCommand : public Command {
 };
 
 class ChangeDirCommand : public BuiltInCommand {
-// TODO: Add your data members public:
-  ChangeDirCommand(const char* cmd_line, char** plastPwd);
+private:
+    std::string newcd;
+public:
+    ChangeDirCommand(const char* cmd_line):newcd(cmd_line);
   virtual ~ChangeDirCommand() {}
   void execute() override;
 };
@@ -154,9 +156,9 @@ class TimeoutCommand : public BuiltInCommand {
 };
 
 class ChmodCommand : public BuiltInCommand {
-  // TODO: Add your data members
+    std::sting newname;
  public:
-  ChmodCommand(const char* cmd_line);
+  ChmodCommand(const char* cmd_line):newname(cmd_line);
   virtual ~ChmodCommand() {}
   void execute() override;
 };
@@ -187,9 +189,9 @@ class KillCommand : public BuiltInCommand {
 
 class SmallShell {
  private:
-  // TODO: Add your data members
-  std::string name;
-  SmallShell(): name(smash);
+   std::string nameprompt;
+   list<std::string> pastCd;
+  SmallShell(): nameprompt(smash> );
  public:
   Command *CreateCommand(const char* cmd_line);
   SmallShell(SmallShell const&)      = delete; // disable copy ctor
@@ -203,9 +205,14 @@ class SmallShell {
     }// Instantiated on first use.
     return instance;
   }
+  void addcd(std::string name);
+  void removecd();
+   std::string get_name() const;
   ~SmallShell();
+  int listsize() const;
   void executeCommand(const char* cmd_line);
   void changename(std::string namenew);
+  std::string returnprevois() const;
   // TODO: add extra methods as needed
 };
 
