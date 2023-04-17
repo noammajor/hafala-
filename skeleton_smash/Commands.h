@@ -27,7 +27,7 @@ class BuiltInCommand : public Command {
 class ExternalCommand : public Command {
  public:
   ExternalCommand(const char* cmd_line);
-  virtual ~ExternalCommand() {}
+  virtual ~ExternalCommand() = default;
   void execute() override;
 };
 
@@ -35,7 +35,7 @@ class PipeCommand : public Command {
   // TODO: Add your data members
  public:
   PipeCommand(const char* cmd_line);
-  virtual ~PipeCommand() {}
+  ~PipeCommand() override = default;
   void execute() override;
 };
 
@@ -43,7 +43,7 @@ class RedirectionCommand : public Command {
  // TODO: Add your data members
  public:
   explicit RedirectionCommand(const char* cmd_line);
-  virtual ~RedirectionCommand() {}
+  ~RedirectionCommand() override = default;
   void execute() override;
   //void prepare() override;
   //void cleanup() override;
@@ -51,9 +51,9 @@ class RedirectionCommand : public Command {
 
 class ChangeDirCommand : public BuiltInCommand {
 private:
-    std::string newcd;
+    std::string newCD;
 public:
-  explicit ChangeDirCommand(const char* cmd_line): BuiltInCommand(cmd_line), newcd(cmd_line){}
+  explicit ChangeDirCommand(const char* cmd_line): BuiltInCommand(cmd_line), newCD(cmd_line){}
   virtual ~ChangeDirCommand() = default;
   void execute() override;
 };
@@ -119,7 +119,7 @@ class JobsList {
   JobEntry * getLastJob(int* lastJobId);
   JobEntry *getLastStoppedJob(int *jobId);
   int getNextPID ();
-  // TODO: Add extra methods or modify exisitng ones as needed
+  // TODO: Add extra methods or modify existing ones as needed
 };
 
 class JobsCommand : public BuiltInCommand {
@@ -183,7 +183,7 @@ class KillCommand : public BuiltInCommand {
  // TODO: Add your data members
  public:
   KillCommand(const char* cmd_line, JobsList* jobs);
-  virtual ~KillCommand() {}
+  virtual ~KillCommand() = default;
   void execute() override;
 };
 
@@ -191,6 +191,7 @@ class SmallShell {
 private:
     std::string namePrompt;
     std::list<std::string> pastCd;
+    JobsList* jobsList;
     static SmallShell* instance; // Guaranteed to be destroyed.
 
     SmallShell(): namePrompt("smash"){}
@@ -210,10 +211,11 @@ public:
   void removeCD();
    std::string get_name() const;
   ~SmallShell() = default;
-  int listsize() const;
+  int listSize() const;
   void executeCommand(const char* cmd_line);
-  void changename(std::string namenew);
+  void changeName(std::string newName);
   std::string returnPrevious() const;
+  JobsList* getJobs();
   // TODO: add extra methods as needed
 };
 

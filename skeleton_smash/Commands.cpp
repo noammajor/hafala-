@@ -112,7 +112,8 @@ void JobsList::killAllJobs()
 
 void JobsList::removeFinishedJobs()
 {///////////////////
-    for()
+
+
 }
 
 JobsList::JobEntry * JobsList::getJobById(int jobId)
@@ -187,21 +188,21 @@ int JobsList::getNextPID ()
 }
 
 
-int SmallShell::listsize() const
+int SmallShell::listSize() const
 {
     return pastCd.size();
 }
 
-void SmallShell::changename(std::string namenew)
+void SmallShell::changeName(std::string newName)
 {
-    if(numofwords(namenew)<2)
+    if(numofwords(newName) < 2)
     {
-        this->namePrompt= "smash> " ;
+        namePrompt= "smash" ;
         return;
     }
     else
     {
-        this->namePrompt=namenew;
+        namePrompt = newName;
         return;
     }
 }
@@ -223,8 +224,14 @@ void SmallShell::removeCD()
 
 std::string SmallShell::get_name() const
 {
-    this->namePrompt;
+    return namePrompt;
 }
+
+JobsList* SmallShell::getJobs()
+{
+    return jobsList;
+}
+
 
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
@@ -235,32 +242,32 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
-    else if (firstWord.compare("chprompt") == 0) {
+    if (firstWord.compare("chprompt") == 0) {
         return new ChmodCommand(cmd_line);
     }
     else if (firstWord.compare("showpid") == 0) {
         return new ShowPidCommand(cmd_line);
     }
-    if (firstWord.compare("pwd") == 0) {
+    else if (firstWord.compare("pwd") == 0) {
         return new GetCurrDirCommand(cmd_line);
     }
     else if (firstWord.compare("cd") == 0) {
         return new ChangeDirCommand(cmd_line);
     }
     else if (firstWord.compare("jobs") == 0) {
-        return new JobsCommand(cmd_line);
+        return new JobsCommand(cmd_line, jobsList);
     }
     else if (firstWord.compare("fg") == 0) {
-        return new ForegroundCommand(cmd_line);
+        return new ForegroundCommand(cmd_line, jobsList);
     }
     else if (firstWord.compare("bg") == 0) {
-        return new BackgroundCommand(cmd_line);
+        return new BackgroundCommand(cmd_line, jobsList);
     }
     else if (firstWord.compare("quit") == 0) {
-        return new QuitCommand(cmd_line);
+        return new QuitCommand(cmd_line, jobsList);
     }
     else if (firstWord.compare("kill") == 0) {
-        return new KillCommand(cmd_line);
+        return new KillCommand(cmd_line, jobsList);
     }
 
   else {
@@ -352,36 +359,34 @@ void GetCurrDirCommand::execute()
     std::string cwd = getcwd();
     cout<<cwd;
 }
-int numofwords(std::string getnum) const
+
+int numofwords(const char* getNum)
 {
-    int count=0;
-    for(int i=1,i<strlen(getnum),i++)
+    int count = 0;
+    for(int i = 1 ; i < strlen(getNum) ; i++)
     {
-        if(getnum[i]!=" " && getnum[i-1]==" ")
-            count++;
-        else if(i==1 && getnum[0]!=" " && getnum[1]==" ")
+        if((&getNum[i] != " " && &getNum[i - 1] == " ") || (i==1 && &getNum[0] != " " && &getNum[1] == " "))
             count++;
     }
 }
-void BuiltInCommand::ChangeDirCommand::execute() override
+
+void ChangeDirCommand::execute()
 {
-    std:string cut;
+    char* cut;
     ///must put the string in cut
     if(numofwords(cut)>2)
     {
         cout<< "smash error: cd: too many arguments";
     }
-
-
-    if(cut=='-')
+    if(*cut == '-')
     {
-        if(smash.listsize()>0)
+        if(SmallShell::getInstance().listSize() > 0)
         {
-            if(chdir(smash.returnprevois())==-1)
+            if(chdir(SmallShell::getInstance().returnPrevious())==-1)
                 {
                 //error look at later
                 }
-            smash.removecd();
+            SmallShell::getInstance().removeCD();
         }
         else
             cout<<"smash error: cd: OLDPWD not set";
@@ -399,16 +404,4 @@ void BuiltInCommand::ChangeDirCommand::execute() override
 
 
 
-}
-int numofwords(std::string getnum) const
-{
-    int count=0;
-    for(int i=1,i<strlen(getnum),i++)
-    {
-        if(getnum[i]!=" " && getnum[i-1]==" ")
-            count++;
-        else if(i==1 && getnum[0]!=" " && getnum[1]==" ")
-            count++;
-    }
-    return count;
 }
