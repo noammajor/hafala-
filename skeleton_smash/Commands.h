@@ -90,16 +90,17 @@ class JobsList {
       time_t begin;
       status currentStatus;
       int Job_ID;
-      std::string name;
+      Command* command;
   public:
-      JobEntry(status starting, int id,std::string name);
+      JobEntry(status starting, int id, Command*  cmd) : begin(time(NULL)), currentStatus(starting), Job_ID(id), command(cmd){}
       ~JobEntry() = default;
-      void settime(time_t time);
-      time_t getcurrenttime();
+      void setTime(time_t time);
+      time_t getCurrentTime();
       int getJobId();
-      int getPID();
-      void changestatus(status curr);
+      void changeStatus(status curr);
+      status getStat();
       void printJob();
+      Command getCommand();
   };
     std::vector<JobEntry> FGround;
     std::vector<JobEntry> BGround;

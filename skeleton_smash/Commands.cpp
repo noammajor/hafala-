@@ -84,9 +84,9 @@ void _removeBackgroundSign(char* cmd_line) {
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
     if (isStopped)
-        Stopped.push_back(JobEntry(stopped,  getNextPID()));
+        Stopped.push_back(JobEntry(stopped, getNextPID(), cmd));
     else
-        Stopped.push_back(JobEntry(background,  getNextPID()));
+        Stopped.push_back(JobEntry(background, getNextPID(), cmd));
 }
 
 void JobsList::printJobsList()
@@ -154,12 +154,36 @@ void JobsList::removeJobById(int jobId)
 
 JobsList::JobEntry * JobsList::getLastJob(int* lastJobId)
 {
-
+    if (lastJobId)
+    {
+        return getJobById(*lastJobId);
+    }
+    else
+    {
+        int maxBG = BGround.back().getJobId();
+        int maxStopped = Stopped.back().getJobId();
+        return &( maxBG > maxStopped ? BGround.back() : Stopped.back() );
+    }
 }
 
 JobsList::JobEntry * JobsList::getLastStoppedJob(int *jobId)
 {
+    if (jobId)
+    {
+        JobEntry* job = getJobById(*jobId);
+        if (job->getStat() == stopped)
+            return job;
+        else
+            return nullptr;
+    }
+    return &Stopped.back();
+}
 
+int JobsList::getNextPID ()
+{
+    int maxBG = BGround.back().getJobId();
+    int maxStopped = Stopped.back().getJobId();
+    return ( maxBG > maxStopped ? maxBG+1 : maxStopped+1 );
 }
 private:
 // TODO: Add your data members
@@ -230,22 +254,42 @@ SmallShell::~SmallShell()
 */
 Command * SmallShell::CreateCommand(const char* cmd_line) {
 	// For example:
-/*
+
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
-  if (firstWord.compare("pwd") == 0) {
-    return new GetCurrDirCommand(cmd_line);
-  }
-  else if (firstWord.compare("showpid") == 0) {
-    return new ShowPidCommand(cmd_line);
-  }
-  else if ...
-  .....
+    else if (firstWord.compare("chprompt") == 0) {
+        return new ChmodCommand(cmd_line);
+    }
+    else if (firstWord.compare("showpid") == 0) {
+        return new ShowPidCommand(cmd_line);
+    }
+    if (firstWord.compare("pwd") == 0) {
+        return new GetCurrDirCommand(cmd_line);
+    }
+    else if (firstWord.compare("cd") == 0) {
+        return new ChangeDirCommand(cmd_line);
+    }
+    else if (firstWord.compare("jobs") == 0) {
+        return new JobsCommand(cmd_line);
+    }
+    else if (firstWord.compare("fg") == 0) {
+        return new ForegroundCommand(cmd_line);
+    }
+    else if (firstWord.compare("bg") == 0) {
+        return new BackgroundCommand(cmd_line);
+    }
+    else if (firstWord.compare("quit") == 0) {
+        return new QuitCommand(cmd_line);
+    }
+    else if (firstWord.compare("kill") == 0) {
+        return new KillCommand(cmd_line);
+    }
+
   else {
     return new ExternalCommand(cmd_line);
   }
-  */
+
   return nullptr;
 }
 
@@ -257,38 +301,44 @@ void SmallShell::executeCommand(const char *cmd_line) {
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
-JobsList::JobEntry::JobEntry(status starting, int id)
+
+Command* createCommand(const)
+
+void JobsList::JobEntry::setTime(time_t time)
 {
-    begin = time(NULL);
-    currentStatus = starting;
-    Job_ID = id;
+    begin = time;
 }
 
-void JobsList::JobEntry::settime(time_t time)
-{
-    this->begin=time;
-}
-
-time_t JobsList::JobEntry::getcurrenttime()
+time_t JobsList::JobEntry::getCurrentTime()
 {
     return difftime(this->begin, time(NULL));
 }
 
 int JobsList::JobEntry::getJobId()
 {
-    return this->Job_ID;
+    return Job_ID;
 }
 
-void JobsList::JobEntry::changestatus(status curr)
+void JobsList::JobEntry::changeStatus(status curr)
 {
-    this->currentStatus=curr;
+    currentStatus = curr;
+}
+
+void JobsList::JobEntry::getStat()
+{
+    return currentStatus;
 }
 
 void JobsList::JobEntry::printJob()
 {
-    cout << "[" << Job_ID << "]"; ////////////////continue
+    cout << "[" << Job_ID << "] " <<; ////////////////continue
     if (currentStatus == stopped)
         cout << " (stopped)";
+}
+
+Command* JobsList::JobEntry::getCommand()
+{
+    return command;
 }
 
 void BuiltInCommand::ChmodCommand::execute() override
