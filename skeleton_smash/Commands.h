@@ -53,14 +53,14 @@ class ChangeDirCommand : public BuiltInCommand {
 private:
     std::string newcd;
 public:
-    ChangeDirCommand(const char* cmd_line):newcd(cmd_line);
-  virtual ~ChangeDirCommand() {}
+  explicit ChangeDirCommand(const char* cmd_line): BuiltInCommand(cmd_line), newcd(cmd_line){}
+  virtual ~ChangeDirCommand() = default;
   void execute() override;
 };
 
 class GetCurrDirCommand : public BuiltInCommand {
  public:
-  GetCurrDirCommand(const char* cmd_line);
+  explicit GetCurrDirCommand(const char* cmd_line);
   virtual ~GetCurrDirCommand() {}
   void execute() override;
 };
@@ -100,7 +100,7 @@ class JobsList {
       void changeStatus(status curr);
       status getStat();
       void printJob();
-      Command getCommand();
+      Command* getCommand();
   };
     std::vector<JobEntry> FGround;
     std::vector<JobEntry> BGround;
@@ -156,9 +156,9 @@ class TimeoutCommand : public BuiltInCommand {
 };
 
 class ChmodCommand : public BuiltInCommand {
-    std::sting newname;
+    std::string newName;
  public:
-  ChmodCommand(const char* cmd_line):newname(cmd_line);
+  explicit ChmodCommand(const char* cmd_line): BuiltInCommand(cmd_line), newName(cmd_line) {}
   virtual ~ChmodCommand() {}
   void execute() override;
 };
@@ -188,31 +188,32 @@ class KillCommand : public BuiltInCommand {
 };
 
 class SmallShell {
- private:
-   std::string nameprompt;
-   list<std::string> pastCd;
-  SmallShell(): nameprompt(smash> );
- public:
-  Command *CreateCommand(const char* cmd_line);
-  SmallShell(SmallShell const&)      = delete; // disable copy ctor
-  void operator=(SmallShell const&)  = delete; // disable = operator
-  static SmallShell& getInstance() // make SmallShell singleton
-  {
-    static SmallShell instance; // Guaranteed to be destroyed.
-    if(instance== nullptr)
+private:
+    std::string namePrompt;
+    std::list<std::string> pastCd;
+    static SmallShell* instance; // Guaranteed to be destroyed.
+
+    SmallShell(): namePrompt("smash"){}
+public:
+    Command *CreateCommand(const char* cmd_line);
+    SmallShell(SmallShell const&)      = delete; // disable copy ctor
+    void operator=(SmallShell const&)  = delete; // disable = operator
+    static SmallShell& getInstance() // make SmallShell singleton
     {
-        instance=SmallShell::SmallShell();
-    }// Instantiated on first use.
-    return instance;
+        if(instance == nullptr)
+        {
+        instance = new SmallShell();
+        }// Instantiated on first use.
+    return *instance;
   }
-  void addcd(std::string name);
-  void removecd();
+  void addCD(std::string name);
+  void removeCD();
    std::string get_name() const;
-  ~SmallShell();
+  ~SmallShell() = default;
   int listsize() const;
   void executeCommand(const char* cmd_line);
   void changename(std::string namenew);
-  std::string returnprevois() const;
+  std::string returnPrevious() const;
   // TODO: add extra methods as needed
 };
 

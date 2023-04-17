@@ -185,73 +185,47 @@ int JobsList::getNextPID ()
     int maxStopped = Stopped.back().getJobId();
     return ( maxBG > maxStopped ? maxBG+1 : maxStopped+1 );
 }
-private:
-// TODO: Add your data members
-std::string name;
-SmallShell(): name(smash);
-public:
-Command *CreateCommand(const char* cmd_line);
-void executeCommand(const char* cmd_line);
-void changename(std::string namenew);
-// TODO: add extra methods as needed
-};
 
-SmallShell::SmallShell()
-{
-    static SmallShell& getInstance() // make SmallShell singleton
-    {
-        static SmallShell instance; // Guaranteed to be destroyed.
-        if(instance== nullptr)
-        {
-            instance=SmallShell::SmallShell();
-        }// Instantiated on first use.
-        return instance;
-    }
 
-// TODO: add your implementation
-}
 int SmallShell::listsize() const
 {
     return pastCd.size();
 }
+
 void SmallShell::changename(std::string namenew)
 {
     if(namenew== nullptr)
     {
-        this->nameprompt= "smash> " ;
+        this->namePrompt= "smash> " ;
         return;
     }
     else
     {
-        this->nameprompt=namenew;
+        this->namePrompt=namenew;
         return;
     }
 }
-std::string SmallShell::returnprevois() const
+
+std::string SmallShell::returnPrevious() const
 {
     return this->pastCd.back();
 }
-void SmallShell::addcd(std::string name)
+
+void SmallShell::addCD(std::string name)
 {
     pastCd.push_back(name);
 }
-void SmallShell::removecd()
+
+void SmallShell::removeCD()
 {
     pastCd.pop_back();
 }
+
 std::string SmallShell::get_name() const
 {
-    this->nameprompt;
+    this->namePrompt;
 }
 
-SmallShell::~SmallShell()
-{
-// TODO: add your implementation
-}
-void ChmodCommand::execute() override
-{
-getInstance()->changename(newname);
-}
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
@@ -305,8 +279,6 @@ void SmallShell::executeCommand(const char *cmd_line) {
 }
 
 
-Command* createCommand(const)
-
 void JobsList::JobEntry::setTime(time_t time)
 {
     begin = time;
@@ -327,14 +299,14 @@ void JobsList::JobEntry::changeStatus(status curr)
     currentStatus = curr;
 }
 
-void JobsList::JobEntry::getStat()
+status JobsList::JobEntry::getStat()
 {
     return currentStatus;
 }
 
 void JobsList::JobEntry::printJob()
 {
-    cout << "[" << Job_ID << "] " <<; ////////////////continue
+    cout << "[" << Job_ID << "] " ; ////////////////continue
     if (currentStatus == stopped)
         cout << " (stopped)";
 }
@@ -344,16 +316,16 @@ Command* JobsList::JobEntry::getCommand()
     return command;
 }
 
-void BuiltInCommand::ChmodCommand::execute() override
+void ChmodCommand::execute()
 {
    std::string work;
-   work=newname;
+   work = newName;
    int counter=0, count=0;
-   for(int i=0;i<work.len()<i++)
+   for(int i = 0 ; i < work.length() ; i++)
     {
        if(work[i]!=" " && counter<2)
        {
-           work[count];
+           work[count] = work[i];
            count++;
        }
        if(work[i]!= " " && i>0)
@@ -370,12 +342,12 @@ void BuiltInCommand::ChmodCommand::execute() override
     }
 }
 
-void BuiltInCommand::ShowPidCommand::execute() override
+void ShowPidCommand::execute()
 {
     cout<<"smash pid is "<< getpid();
 }
 
-void BuiltInCommand::GetCurrDirCommand::execute() override
+void GetCurrDirCommand::execute()
 {
     std::string cwd = getcwd();
     cout<<cwd;
