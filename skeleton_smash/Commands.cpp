@@ -192,7 +192,7 @@ int SmallShell::listsize() const
 }
 void SmallShell::changename(std::string namenew)
 {
-    if(namenew== nullptr)
+    if(numofwords(namenew)<2)
     {
         this->nameprompt= "smash> " ;
         return;
@@ -224,10 +224,7 @@ SmallShell::~SmallShell()
 {
 // TODO: add your implementation
 }
-void ChmodCommand::execute() override
-{
-getInstance()->changename(newname);
-}
+
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
@@ -330,11 +327,27 @@ void BuiltInCommand::GetCurrDirCommand::execute() override
     std::string cwd = getcwd();
     cout<<cwd;
 }
-
+int numofwords(std::string getnum) const
+{
+    int count=0;
+    for(int i=1,i<strlen(getnum),i++)
+    {
+        if(getnum[i]!=" " && getnum[i-1]==" ")
+            count++;
+        else if(i==1 && getnum[0]!=" " && getnum[1]==" ")
+            count++;
+    }
+}
 void BuiltInCommand::ChangeDirCommand::execute() override
 {
     std:string cut;
-    ///later - need to check for more then one arg
+    ///must put the string in cut
+    if(numofwords(cut)>2)
+    {
+        cout<< "smash error: cd: too many arguments";
+    }
+
+
     if(cut=='-')
     {
         if(smash.listsize()>0)
@@ -361,4 +374,16 @@ void BuiltInCommand::ChangeDirCommand::execute() override
 
 
 
+}
+int numofwords(std::string getnum) const
+{
+    int count=0;
+    for(int i=1,i<strlen(getnum),i++)
+    {
+        if(getnum[i]!=" " && getnum[i-1]==" ")
+            count++;
+        else if(i==1 && getnum[0]!=" " && getnum[1]==" ")
+            count++;
+    }
+    return count;
 }
