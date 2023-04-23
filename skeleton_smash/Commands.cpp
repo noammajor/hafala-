@@ -80,6 +80,25 @@ void _removeBackgroundSign(char* cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h 
 
+int numOfWords(const char* getNum, string* argsTable)
+{
+    int count = 0;
+    string cur = &getNum[0];
+    int index = 0;
+    for(int i = 1 ; i < strlen(getNum) ; i++)
+    {
+        if((&getNum[i] != " " && &getNum[i - 1] == " ") || (i==1 && &getNum[0] != " " && &getNum[1] == " "))
+        {
+            count++;
+            argsTable[index++] = cur;
+            cur = "";
+        }
+        else
+            cur += &getNum[i];
+    }
+    return count;
+}
+
 
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
@@ -193,16 +212,17 @@ int SmallShell::listSize() const
     return pastCd.size();
 }
 
-void SmallShell::changeName(std::string newName)
+void SmallShell::changeName(const char* newName)
 {
-    if(numofwords(newName) < 2)
+    string args[20];
+    if(numOfWords(newName, args) < 2)
     {
         namePrompt= "smash" ;
         return;
     }
     else
     {
-        namePrompt = newName;
+        namePrompt = args[1];
         return;
     }
 }
@@ -325,7 +345,7 @@ Command* JobsList::JobEntry::getCommand()
 
 void ChmodCommand::execute()
 {
-   std::string work;
+  /* std::string work;
    work = newName;
    int counter=0, count=0;
    for(int i = 0 ; i < work.length() ; i++)
@@ -345,8 +365,8 @@ void ChmodCommand::execute()
    std::string final=work;
    if(strlen(final)>8)
     {
-    changename(final.substr(8,strlen(final)));
-    }
+        changename(final.substr(8,strlen(final)));
+    }*/
 }
 
 void ShowPidCommand::execute()
@@ -360,21 +380,13 @@ void GetCurrDirCommand::execute()
     cout<<cwd;
 }
 
-int numofwords(const char* getNum)
-{
-    int count = 0;
-    for(int i = 1 ; i < strlen(getNum) ; i++)
-    {
-        if((&getNum[i] != " " && &getNum[i - 1] == " ") || (i==1 && &getNum[0] != " " && &getNum[1] == " "))
-            count++;
-    }
-}
 
 void ChangeDirCommand::execute()
 {
     char* cut;
+    string args[20];
     ///must put the string in cut
-    if(numofwords(cut)>2)
+    if(numOfWords(cut, args) > 2)
     {
         cout<< "smash error: cd: too many arguments";
     }
@@ -391,7 +403,7 @@ void ChangeDirCommand::execute()
         else
             cout<<"smash error: cd: OLDPWD not set";
     }
-    else if
+    else /////////////////////////////////////////////////////////////////
     {
         std::string cwd = getcwd();
         smash.addcd(cwd);

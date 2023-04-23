@@ -8,25 +8,25 @@
 #define COMMAND_MAX_ARGS (20)
 
 class Command {
-// TODO: Add your data members
- public:
-  Command(const char* cmd_line);
-  virtual ~Command();
-  virtual void execute() = 0;
-  //virtual void prepare();
-  //virtual void cleanup();
-  // TODO: Add your extra methods if needed
+    const char* cmdLine;
+public:
+    Command(const char* cmd_line) : cmdLine(cmd_line){}
+    virtual ~Command();
+    virtual void execute() = 0;
+    //virtual void prepare();
+    //virtual void cleanup();
+    // TODO: Add your extra methods if needed
 };
 
 class BuiltInCommand : public Command {
- public:
-  BuiltInCommand(const char* cmd_line);
-  virtual ~BuiltInCommand() {}
+public:
+    BuiltInCommand(const char* cmd_line): Command(cmd_line){}
+    virtual ~BuiltInCommand() {}
 };
 
 class ExternalCommand : public Command {
- public:
-  ExternalCommand(const char* cmd_line);
+public:
+  ExternalCommand(const char* cmd_line): Command(cmd_line){}
   virtual ~ExternalCommand() = default;
   void execute() override;
 };
@@ -34,7 +34,7 @@ class ExternalCommand : public Command {
 class PipeCommand : public Command {
   // TODO: Add your data members
  public:
-  PipeCommand(const char* cmd_line);
+  PipeCommand(const char* cmd_line): Command(cmd_line){}
   ~PipeCommand() override = default;
   void execute() override;
 };
@@ -42,7 +42,7 @@ class PipeCommand : public Command {
 class RedirectionCommand : public Command {
  // TODO: Add your data members
  public:
-  explicit RedirectionCommand(const char* cmd_line);
+  explicit RedirectionCommand(const char* cmd_line): Command(cmd_line){}
   ~RedirectionCommand() override = default;
   void execute() override;
   //void prepare() override;
@@ -50,24 +50,22 @@ class RedirectionCommand : public Command {
 };
 
 class ChangeDirCommand : public BuiltInCommand {
-private:
-    std::string newCD;
 public:
-  explicit ChangeDirCommand(const char* cmd_line): BuiltInCommand(cmd_line), newCD(cmd_line){}
+  explicit ChangeDirCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
   virtual ~ChangeDirCommand() = default;
   void execute() override;
 };
 
 class GetCurrDirCommand : public BuiltInCommand {
  public:
-  explicit GetCurrDirCommand(const char* cmd_line);
+  explicit GetCurrDirCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
   virtual ~GetCurrDirCommand() {}
   void execute() override;
 };
 
 class ShowPidCommand : public BuiltInCommand {
  public:
-  ShowPidCommand(const char* cmd_line);
+  explicit ShowPidCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
   virtual ~ShowPidCommand() {}
   void execute() override;
 };
@@ -76,7 +74,7 @@ class JobsList;
 class QuitCommand : public BuiltInCommand {
 // TODO: Add your data members
 public:
-  QuitCommand(const char* cmd_line, JobsList* jobs);
+  QuitCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line){}
   virtual ~QuitCommand() {}
   void execute() override;
 };
@@ -150,15 +148,14 @@ class TimeoutCommand : public BuiltInCommand {
 /* Bonus */
 // TODO: Add your data members
  public:
-  explicit TimeoutCommand(const char* cmd_line);
+  explicit TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
   virtual ~TimeoutCommand() {}
   void execute() override;
 };
 
-class ChmodCommand : public BuiltInCommand {
-    std::string newName;
+class ChmodCommand : public BuiltInCommand {;
  public:
-  explicit ChmodCommand(const char* cmd_line): BuiltInCommand(cmd_line), newName(cmd_line) {}
+  explicit ChmodCommand(const char* cmd_line): BuiltInCommand(cmd_line) {}
   virtual ~ChmodCommand() {}
   void execute() override;
 };
@@ -166,7 +163,7 @@ class ChmodCommand : public BuiltInCommand {
 class GetFileTypeCommand : public BuiltInCommand {
   // TODO: Add your data members
  public:
-  GetFileTypeCommand(const char* cmd_line);
+  explicit GetFileTypeCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
   virtual ~GetFileTypeCommand() {}
   void execute() override;
 };
@@ -174,7 +171,7 @@ class GetFileTypeCommand : public BuiltInCommand {
 class SetcoreCommand : public BuiltInCommand {
   // TODO: Add your data members
  public:
-  SetcoreCommand(const char* cmd_line);
+  explicit SetcoreCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
   virtual ~SetcoreCommand() {}
   void execute() override;
 };
@@ -213,7 +210,7 @@ public:
   ~SmallShell() = default;
   int listSize() const;
   void executeCommand(const char* cmd_line);
-  void changeName(std::string newName);
+  void changeName(const char* newName);
   std::string returnPrevious() const;
   JobsList* getJobs();
   // TODO: add extra methods as needed
