@@ -461,9 +461,9 @@ void RegularCommand::execute()
     numOfWords(cmdLine,argsTable);
     pid_t child_pid;
     int child_status;
-    child_pid=fork();
+    child_pid = fork();
     bool exists=false;
-    exists=_isBackgroundComamnd(cmd_line);
+    exists=_isBackgroundComamnd(cmdLine);
     if(child_pid==-1)
     {
         perror("smash error: fork failed");
@@ -487,7 +487,7 @@ void SpecialCommand::execute()
     int child_status;
     child_pid=fork();
     bool exists=false;
-    exists=_isBackgroundComamnd(cmd_line);
+    exists=_isBackgroundComamnd(cmdLine);
     if(child_pid==-1)
     {
         perror("smash error: fork failed");
