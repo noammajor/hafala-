@@ -33,18 +33,19 @@ public:
   void execute() override;
 };
 
-class RegularCommand : public ExternalCommand
+class SimpleCommand : public ExternalCommand
 {
 public:
-   RegularCommand(const char* cmd_line) : ExternalCommand(cmd_line){}
-   ~RegularCommand() = default override;
+   SimpleCommand(const char* cmd_line) : ExternalCommand(cmd_line){}
+   ~SimpleCommand() = default;
    void execute() override;
 };
+
 class SpecialCommand : public ExternalCommand
 {
 public:
     SpecialCommand(const char* cmd_line) : ExternalCommand(cmd_line){}
-    ~SpecialCommand() = default override;
+    ~SpecialCommand() = default;
     void execute() override;
 };
 class PipeCommand : public Command {

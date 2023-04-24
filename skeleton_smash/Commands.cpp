@@ -455,7 +455,7 @@ void JobsCommand::execute()
 }
 
 
-void RegularCommand::execute()
+void SimpleCommand::execute()
 {
     std::string argsTable[22];
     numOfWords(cmdLine,argsTable);
