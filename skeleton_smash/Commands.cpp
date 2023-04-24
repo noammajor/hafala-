@@ -378,14 +378,15 @@ void ShowPidCommand::execute()
 
 void GetCurrDirCommand::execute()
 {
-  /*  std::string cwd = getcwd();
-    cout<<cwd;*/
+    char* cwd[200];
+    getcwd(cwd,200);
+    cout<<cwd;
 }
 
 
 void ChangeDirCommand::execute()
 {
-   /* char* cut;
+    char* cut;
     string args[20];
     ///must put the string in cut
     if(numOfWords(cut, args) > 2)
@@ -407,14 +408,15 @@ void ChangeDirCommand::execute()
     }
     else /////////////////////////////////////////////////////////////////
     {
-        char* cwd = get_current_dir_name();
+        char* cwd[200]
+        getcwd(cwd, 200);
         SmallShell::getInstance().addCD(cwd);
         if(chdir(SmallShell::getInstance().returnPrevious().c_str())==-1)
             {
                 //error look at later
             }
 
-    }*/
+    }
 }
 
 void ForegroundCommand::execute()
