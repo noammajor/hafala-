@@ -110,10 +110,9 @@ public:
     std::vector<JobEntry*> FGround;
     std::vector<JobEntry*> BGround;
     std::vector<JobEntry*> Stopped;
-    int Amount;
  // TODO: Add your data members
  public:
-  JobsList(): FGround(), BGround(), Stopped(),Amount(0){}
+  JobsList(): FGround(), BGround(), Stopped(){}
   ~JobsList() = default;
   void addJob(Command* cmd, bool isStopped = false);
   void printJobsList();
@@ -121,8 +120,8 @@ public:
   void removeFinishedJobs();
   JobEntry * getJobById(int jobId);
   void removeJobById(int jobId);
-  JobEntry * getLastJob(int* lastJobId);
-  JobEntry *getLastStoppedJob(int *jobId);
+  JobEntry * getLastJob(int lastJobId);
+  JobEntry *getLastStoppedJob(int jobId);
   int getNextPID ();
   // TODO: Add extra methods or modify existing ones as needed
 };

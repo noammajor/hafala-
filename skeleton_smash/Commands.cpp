@@ -97,6 +97,7 @@ int numOfWords(const char* getNum, string* argsTable)
         }
         else
             cur += &getNum[i];
+        argsTable[index] = "\0";
     }
     return count;
 }
@@ -184,25 +185,23 @@ void JobsList::removeJobById(int jobId)
     }
 }
 
-JobsList::JobEntry * JobsList::getLastJob(int* lastJobId)
+JobsList::JobEntry * JobsList::getLastJob(int lastJobId)
 {
-    if (lastJobId)
+    if (lastJobId >  0)
     {
-        return getJobById(*lastJobId);
+        JobEntry *job = getJobById(lastJobId);
+        return job;
     }
-    else
-    {
-        int maxBG = BGround.back()->getJobId();
-        int maxStopped = Stopped.back()->getJobId();
-        return ( maxBG > maxStopped ? BGround.back() : Stopped.back() );
-    }
+    int maxBG = BGround.back()->getJobId();
+    int maxStopped = Stopped.back()->getJobId();
+    return ( maxBG > maxStopped ? BGround.back() : Stopped.back() );
 }
 
-JobsList::JobEntry * JobsList::getLastStoppedJob(int *jobId)
+JobsList::JobEntry * JobsList::getLastStoppedJob(int jobId)
 {
-    if (jobId)
+    if (jobId > 0)
     {
-        JobEntry* job = getJobById(*jobId);
+        JobEntry* job = getJobById(jobId);
         if (job->getStat() == stopped)
             return job;
         else
@@ -226,7 +225,7 @@ int SmallShell::listSize() const
 
 void SmallShell::changeName(const char* newName)
 {
-    string args[20];
+    string args[21];
     if(numOfWords(newName, args) < 2)
     {
         namePrompt= "smash" ;
@@ -359,7 +358,7 @@ Command* JobsList::JobEntry::getCommand()
 
 void chmpromt::execute()
 {
-    string args[20];
+    string args[21];
     int argsCnt = numOfWords(cmdLine, args);
     if (argsCnt == 1)
     {
@@ -386,7 +385,7 @@ void GetCurrDirCommand::execute()
 
 void ChangeDirCommand::execute()
 {
-    string args[20];
+    string args[21];
     ///must put the string in cut
     if(numOfWords(cmdLine, args) > 2)
     {
@@ -420,7 +419,7 @@ void ChangeDirCommand::execute()
 
 void ForegroundCommand::execute()
 {
-  /*  string args[20];
+    string args[21];
     int argsCount = numOfWords(cmdLine, args);
     if (argsCount == 2)
     {
@@ -428,13 +427,21 @@ void ForegroundCommand::execute()
         try
         {
             int pid = stoi(firstArg);
-            JobsList::JobEntry* job = jobs->getJobById(pid);
+            if (pid <= 0 )
+            {
+                cout << "smash error:fg:job-id " << pid << "does not exist";
+            }
+            JobsList::JobEntry* job = jobs->getLastJob(pid);
+
+            //move to forground
+
+            jobs->removeJobById(job->getJobId());
         }
         catch (exception &e)
         {
             cout << "smash error:fg:invalid arguments" ;
         }
-    }*/
+    }
 }
 
 void BackgroundCommand::execute()
