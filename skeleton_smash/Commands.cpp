@@ -459,3 +459,53 @@ void JobsCommand::execute()
 {
     SmallShell::getInstance().getJobs()->printJobsList();
 }
+
+
+void RegularCommand::execute()
+{
+    std::string argsTable[22];
+    numOfWords(cmdLine,argsTable);
+    pid_t child_pid;
+    int child_status;
+    child_pid=fork();
+    bool exists=false;
+    exists=_isBackgroundComamnd(cmd_line);
+    if(child_pid==-1)
+    {
+        perror("smash error: fork failed");
+    }
+    if(child_pid==0)
+    {
+        execv(argsTable[0].c_str(),argsTable->c_str());
+        exit(0);
+    }
+    else if(!(exists))
+    {
+        wait(NULL);
+    }
+}
+void SpecialCommand::execute()
+{
+    std::string argsTable[22];
+    numOfWords(cmdLine,argsTable);
+    argsTable[0]="/bin/bash";
+    pid_t child_pid;
+    int child_status;
+    child_pid=fork();
+    bool exists=false;
+    exists=_isBackgroundComamnd(cmd_line);
+    if(child_pid==-1)
+    {
+        perror("smash error: fork failed");
+    }
+    if(child_pid==0)
+    {
+        execv(argsTable[0].c_str(),argsTable->c_str());
+        exit(0);
+    }
+    else if(!(exists))
+    {
+        wait(NULL);
+    }
+
+}

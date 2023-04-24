@@ -33,6 +33,20 @@ public:
   void execute() override;
 };
 
+class RegularCommand : public ExternalCommand
+{
+public:
+   RegularCommand(const char* cmd_line) : ExternalCommand(cmd_line){}
+   ~RegularCommand() = default override;
+   void execute() override;
+};
+class SpecialCommand : public ExternalCommand
+{
+public:
+    SpecialCommand(const char* cmd_line) : ExternalCommand(cmd_line){}
+    ~SpecialCommand() = default override;
+    void execute() override;
+};
 class PipeCommand : public Command {
   // TODO: Add your data members
  public:
