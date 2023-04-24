@@ -378,7 +378,7 @@ void ShowPidCommand::execute()
 
 void GetCurrDirCommand::execute()
 {
-    char* cwd[200];
+    char cwd[200];
     getcwd(cwd,200);
     cout<<cwd;
 }
@@ -386,14 +386,13 @@ void GetCurrDirCommand::execute()
 
 void ChangeDirCommand::execute()
 {
-    char* cut;
     string args[20];
     ///must put the string in cut
-    if(numOfWords(cut, args) > 2)
+    if(numOfWords(cmdLine, args) > 2)
     {
         cout<< "smash error: cd: too many arguments";
     }
-    if(*cut == '-')
+    if(*cmdLine == '-')
     {
         if(SmallShell::getInstance().listSize() > 0)
         {
@@ -408,9 +407,9 @@ void ChangeDirCommand::execute()
     }
     else /////////////////////////////////////////////////////////////////
     {
-        char* cwd[200]
+        char cwd[200];
         getcwd(cwd, 200);
-        SmallShell::getInstance().addCD(cwd);
+        SmallShell::getInstance().addCD( cwd);
         if(chdir(SmallShell::getInstance().returnPrevious().c_str())==-1)
             {
                 //error look at later
