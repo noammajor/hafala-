@@ -359,28 +359,16 @@ Command* JobsList::JobEntry::getCommand()
 
 void chmpromt::execute()
 {
-    /*std::string work;
-    work = newName;
-    int counter=0, count=0;
-    for(int i = 0 ; i < work.length() ; i++)
+    string args[20];
+    int argsCnt = numOfWords(cmdLine, args);
+    if (argsCnt == 1)
     {
-        if(work[i]!=" " && counter<2)
-        {
-            work[count] = work[i];
-            count++;
-        }
-        if(work[i]!= " " && i>0)
-        {
-            if(work[i-1]==" ")
-                counter++;
-        }
+        SmallShell::getInstance().changeName("smash");
     }
-    work[count]='/0';
-    std::string final=work;
-    if(strlen(final)>8)
+    else
     {
-        changename(final.substr(8,strlen(final)));
-    }*/
+        SmallShell::getInstance().changeName(args[1].c_str());
+    }
 }
 
 void ShowPidCommand::execute()
