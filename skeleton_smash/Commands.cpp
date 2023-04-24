@@ -85,7 +85,7 @@ int numOfWords(const char* getNum, string* argsTable)
     int count = 0;
     string cur = &getNum[0];
     int index = 0;
-    for(int i = 1 ; i < strlen(getNum) ; i++)
+    for(int i = 1 ; i < (int)strlen(getNum) ; i++)
     {
         if((&getNum[i] != " " && &getNum[i - 1] == " ") || (i==1 && &getNum[0] != " " && &getNum[1] == " "))
         {
@@ -103,22 +103,28 @@ int numOfWords(const char* getNum, string* argsTable)
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
     if (isStopped)
-        Stopped.push_back(JobEntry(stopped, getNextPID(), cmd));
+    {
+        JobEntry job = JobEntry(stopped, getNextPID(), cmd);
+        Stopped.push_back(&job);
+    }
     else
-        Stopped.push_back(JobEntry(background, getNextPID(), cmd));
+    {
+        JobEntry job = JobEntry(background, getNextPID(), cmd);
+        Stopped.push_back(&job);
+    }
 }
 
 void JobsList::printJobsList()
 {
-    JobEntry bgJob = BGround.front();
-    for (JobEntry bgJob: BGround)
+    JobEntry* bgJob = BGround.front();
+    for (JobEntry* bgJob: BGround)
     {
-        for (JobEntry stoppedJob: Stopped)
+        for (JobEntry* stoppedJob: Stopped)
         {
-            if (stoppedJob.getJobId() < bgJob.getJobId())
-                stoppedJob.printJob();
+            if (stoppedJob->getJobId() < bgJob->getJobId())
+                stoppedJob->printJob();
             else
-                bgJob.printJob();
+                bgJob->printJob();
         }
     }
 }
@@ -137,27 +143,28 @@ void JobsList::removeFinishedJobs()
 
 JobsList::JobEntry * JobsList::getJobById(int jobId)
 {
-    for (JobEntry job : BGround)
+    for (JobEntry* job : BGround)
     {
-        if (job.getJobId() == jobId)
-            return &job;
-        if (job.getJobId() > jobId)
+        if (job->getJobId() == jobId)
+            return job;
+        if (job->getJobId() > jobId)
             break;
     }
-    for (JobEntry job : Stopped)
+    for (JobEntry* job : Stopped)
     {
-        if (job.getJobId() == jobId)
-            return &job;
-        if (job.getJobId() > jobId)
+        if (job->getJobId() == jobId)
+            return job;
+        if (job->getJobId() > jobId)
             return nullptr;
     }
+    return nullptr;
 }
 
 void JobsList::removeJobById(int jobId)
 {
     for (int i = 0; i < BGround.size() ; i++)
     {
-        if (BGround[i].getJobId() == jobId)
+        if (BGround[i]->getJobId() == jobId)
         {
             BGround.erase(BGround.begin() + i);
             return;
@@ -165,7 +172,7 @@ void JobsList::removeJobById(int jobId)
     }
     for (int j = 0; j < Stopped.size() ; j++)
     {
-        if (Stopped[j].getJobId() == jobId) {
+        if (Stopped[j]->getJobId() == jobId) {
             Stopped.erase(Stopped.begin() + j);
             return;
         }
@@ -180,9 +187,9 @@ JobsList::JobEntry * JobsList::getLastJob(int* lastJobId)
     }
     else
     {
-        int maxBG = BGround.back().getJobId();
-        int maxStopped = Stopped.back().getJobId();
-        return &( maxBG > maxStopped ? BGround.back() : Stopped.back() );
+        int maxBG = BGround.back()->getJobId();
+        int maxStopped = Stopped.back()->getJobId();
+        return ( maxBG > maxStopped ? BGround.back() : Stopped.back() );
     }
 }
 
@@ -196,13 +203,13 @@ JobsList::JobEntry * JobsList::getLastStoppedJob(int *jobId)
         else
             return nullptr;
     }
-    return &Stopped.back();
+    return Stopped.back();
 }
 
 int JobsList::getNextPID ()
 {
-    int maxBG = BGround.back().getJobId();
-    int maxStopped = Stopped.back().getJobId();
+    int maxBG = BGround.back()->getJobId();
+    int maxStopped = Stopped.back()->getJobId();
     return ( maxBG > maxStopped ? maxBG+1 : maxStopped+1 );
 }
 
@@ -263,7 +270,7 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
     if (firstWord.compare("chprompt") == 0) {
-        return new ChmodCommand(cmd_line);
+        return new ChmodCommand(cmd_line); ///////////////////////////
     }
     else if (firstWord.compare("showpid") == 0) {
         return new ShowPidCommand(cmd_line);
@@ -345,33 +352,12 @@ Command* JobsList::JobEntry::getCommand()
 
 void ChmodCommand::execute()
 {
-  /* std::string work;
-   work = newName;
-   int counter=0, count=0;
-   for(int i = 0 ; i < work.length() ; i++)
-    {
-       if(work[i]!=" " && counter<2)
-       {
-           work[count] = work[i];
-           count++;
-       }
-       if(work[i]!= " " && i>0)
-        {
-           if(work[i-1]==" ")
-               counter++;
-        }
-    }
-   work[count]='/0';
-   std::string final=work;
-   if(strlen(final)>8)
-    {
-        changename(final.substr(8,strlen(final)));
-    }*/
+
 }
 
 void ShowPidCommand::execute()
 {
-    cout<<"smash pid is "<< getpid();
+    cout<<"smash pid is "<< getpid() << endl;
 }
 
 void GetCurrDirCommand::execute()
@@ -406,14 +392,35 @@ void ChangeDirCommand::execute()
     else /////////////////////////////////////////////////////////////////
     {
         std::string cwd = getcwd();
-        smash.addcd(cwd);
-        if(chdir(smash.returnprevois())==-1)
+        SmallShell::getInstance().addCD(cwd);
+        if(chdir(SmallShell::getInstance().returnPrevious())==-1)
             {
                 //error look at later
             }
 
     }
+}
 
+void ForegroundCommand::execute()
+{
+    string args[20];
+    int argsCount = numOfWords(cmdLine, args);
+    if (argsCount == 2)
+    {
+        string firstArg = args[1];
+        try
+        {
+            int pid = stoi(firstArg);
+            JobsList::JobEntry* job = jobs->getJobById(pid);
+        }
+        catch (exception &e)
+        {
+            cout << "smash error:fg:invalid arguments" ;
+        }
+    }
+}
 
+void BackgroundCommand::execute()
+{
 
 }

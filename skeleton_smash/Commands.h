@@ -8,6 +8,7 @@
 #define COMMAND_MAX_ARGS (20)
 
 class Command {
+protected:
     const char* cmdLine;
 public:
     Command(const char* cmd_line) : cmdLine(cmd_line){}
@@ -64,7 +65,7 @@ class GetCurrDirCommand : public BuiltInCommand {
 };
 
 class ShowPidCommand : public BuiltInCommand {
- public:
+public:
   explicit ShowPidCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
   virtual ~ShowPidCommand() {}
   void execute() override;
@@ -82,8 +83,8 @@ public:
 enum status {forground, background, stopped};
 
 class JobsList {
- public:
-  class JobEntry{
+public:
+    class JobEntry{
   private:
       time_t begin;
       status currentStatus;
@@ -100,9 +101,9 @@ class JobsList {
       void printJob();
       Command* getCommand();
   };
-    std::vector<JobEntry> FGround;
-    std::vector<JobEntry> BGround;
-    std::vector<JobEntry> Stopped;
+    std::vector<JobEntry*> FGround;
+    std::vector<JobEntry*> BGround;
+    std::vector<JobEntry*> Stopped;
     int Amount;
  // TODO: Add your data members
  public:
@@ -129,17 +130,17 @@ class JobsCommand : public BuiltInCommand {
 };
 
 class ForegroundCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
-  ForegroundCommand(const char* cmd_line, JobsList* jobs);
+    JobsList* jobs;
+public:
+  ForegroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs){}
   virtual ~ForegroundCommand() {}
   void execute() override;
 };
 
 class BackgroundCommand : public BuiltInCommand {
- // TODO: Add your data members
+    JobsList* jobs;
  public:
-  BackgroundCommand(const char* cmd_line, JobsList* jobs);
+  BackgroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs){}
   virtual ~BackgroundCommand() {}
   void execute() override;
 };
