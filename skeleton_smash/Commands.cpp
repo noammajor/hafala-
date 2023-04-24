@@ -87,7 +87,8 @@ int numOfWords(const char* getNum, string* argsTable)
     int index = 0;
     for(int i = 1 ; i < strlen(getNum) ; i++)
     {
-        if((&getNum[i] != " " && &getNum[i - 1] == " ") || (i==1 && &getNum[0] != " " && &getNum[1] == " "))
+
+        if((strcmp(&getNum[i]," ") != 0 && strcmp(&getNum[i-1]," ") == 0) || (i==1 && strcmp(&getNum[0]," ")!=0 && strcmp(&getNum[1]," ")==0))
         {
             count++;
             argsTable[index++] = cur;
@@ -399,7 +400,7 @@ void ChangeDirCommand::execute()
     {
         if(SmallShell::getInstance().listSize() > 0)
         {
-            if(chdir(SmallShell::getInstance().returnPrevious())==-1)
+            if(chdir(SmallShell::getInstance().returnPrevious().c_str())==-1)
                 {
                 //error look at later
                 }
@@ -410,8 +411,8 @@ void ChangeDirCommand::execute()
     }
     else /////////////////////////////////////////////////////////////////
     {
-        std::string cwd = getcwd();
-        smash.addcd(cwd);
+        std::string cwd = current_path();
+        SmallShell::getInstance().addcd(cwd);
         if(chdir(smash.returnprevois())==-1)
             {
                 //error look at later
