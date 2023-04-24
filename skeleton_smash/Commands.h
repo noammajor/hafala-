@@ -14,7 +14,7 @@ public:
     Command(const char* cmd_line) : cmdLine(cmd_line){}
     virtual ~Command();
     virtual void execute() = 0;
-    std::string printcomd() const;
+    void printcomd() const;
     //virtual void prepare();
     //virtual void cleanup();
     // TODO: Add your extra methods if needed

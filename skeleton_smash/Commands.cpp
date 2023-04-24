@@ -8,6 +8,7 @@
 #include "Commands.h"
 #include <cstring>
 
+
 using namespace std;
 
 const std::string WHITESPACE = " \n\r\t\f\v";
@@ -99,7 +100,8 @@ int numOfWords(const char* getNum, string* argsTable)
     }
     return count;
 }
-std::string Command::printcomd() const
+
+void Command::printcomd() const
 {
     cout<< cmdLine;
 }
@@ -120,7 +122,6 @@ void JobsList::addJob(Command* cmd, bool isStopped)
 
 void JobsList::printJobsList()
 {
-    JobEntry* bgJob = BGround.front();
     for (JobEntry* bgJob: BGround)
     {
         for (JobEntry* stoppedJob: Stopped)
@@ -166,7 +167,7 @@ JobsList::JobEntry * JobsList::getJobById(int jobId)
 
 void JobsList::removeJobById(int jobId)
 {
-    for (int i = 0; i < BGround.size() ; i++)
+    for (int i = 0; i < (int)BGround.size() ; i++)
     {
         if (BGround[i]->getJobId() == jobId)
         {
@@ -174,7 +175,7 @@ void JobsList::removeJobById(int jobId)
             return;
         }
     }
-    for (int j = 0; j < Stopped.size() ; j++)
+    for (int j = 0; j < (int)Stopped.size() ; j++)
     {
         if (Stopped[j]->getJobId() == jobId) {
             Stopped.erase(Stopped.begin() + j);
@@ -207,7 +208,7 @@ JobsList::JobEntry * JobsList::getLastStoppedJob(int *jobId)
         else
             return nullptr;
     }
-    return &Stopped.back();
+    return Stopped.back();
 }
 
 int JobsList::getNextPID ()
@@ -358,7 +359,7 @@ Command* JobsList::JobEntry::getCommand()
 
 void chmpromt::execute()
 {
-    std::string work;
+    /*std::string work;
     work = newName;
     int counter=0, count=0;
     for(int i = 0 ; i < work.length() ; i++)
@@ -379,7 +380,7 @@ void chmpromt::execute()
     if(strlen(final)>8)
     {
         changename(final.substr(8,strlen(final)));
-    }
+    }*/
 }
 
 void ShowPidCommand::execute()
@@ -389,14 +390,14 @@ void ShowPidCommand::execute()
 
 void GetCurrDirCommand::execute()
 {
-    std::string cwd = getcwd();
-    cout<<cwd;
+  /*  std::string cwd = getcwd();
+    cout<<cwd;*/
 }
 
 
 void ChangeDirCommand::execute()
 {
-    char* cut;
+   /* char* cut;
     string args[20];
     ///must put the string in cut
     if(numOfWords(cut, args) > 2)
@@ -418,19 +419,19 @@ void ChangeDirCommand::execute()
     }
     else /////////////////////////////////////////////////////////////////
     {
-        std::string cwd = current_path();
-        SmallShell::getInstance().addcd(cwd);
-        if(chdir(smash.returnprevois())==-1)
+        char* cwd = get_current_dir_name();
+        SmallShell::getInstance().addCD(cwd);
+        if(chdir(SmallShell::getInstance().returnPrevious().c_str())==-1)
             {
                 //error look at later
             }
 
-    }
+    }*/
 }
 
 void ForegroundCommand::execute()
 {
-    string args[20];
+  /*  string args[20];
     int argsCount = numOfWords(cmdLine, args);
     if (argsCount == 2)
     {
@@ -444,7 +445,7 @@ void ForegroundCommand::execute()
         {
             cout << "smash error:fg:invalid arguments" ;
         }
-    }
+    }*/
 }
 
 void BackgroundCommand::execute()
@@ -454,5 +455,5 @@ void BackgroundCommand::execute()
 
 void JobsCommand::execute()
 {
-    SmallShell::getInstance().jobsList->printJobsList();
+    SmallShell::getInstance().getJobs()->printJobsList();
 }
