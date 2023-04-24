@@ -98,7 +98,10 @@ int numOfWords(const char* getNum, string* argsTable)
     }
     return count;
 }
-
+std::string Command::printcomd() const
+{
+    cout<< cmdLine;
+}
 
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
@@ -334,6 +337,8 @@ status JobsList::JobEntry::getStat()
 void JobsList::JobEntry::printJob()
 {
     cout << "[" << Job_ID << "] " ; ////////////////continue
+    command->printcomd();
+    cout<<" : "<<getpid()<< getCurrentTime();
     if (currentStatus == stopped)
         cout << " (stopped)";
 }
@@ -343,9 +348,9 @@ Command* JobsList::JobEntry::getCommand()
     return command;
 }
 
-void ChmodCommand::execute()
+void chmpromt::execute()
 {
-  /* std::string work;
+   std::string work;
    work = newName;
    int counter=0, count=0;
    for(int i = 0 ; i < work.length() ; i++)
@@ -366,7 +371,7 @@ void ChmodCommand::execute()
    if(strlen(final)>8)
     {
         changename(final.substr(8,strlen(final)));
-    }*/
+    }
 }
 
 void ShowPidCommand::execute()
@@ -416,4 +421,8 @@ void ChangeDirCommand::execute()
 
 
 
+}
+void JobsCommand::execute() override
+{
+    SmallShell::getInstance().jobsList->printJobsList();
 }
