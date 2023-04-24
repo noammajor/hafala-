@@ -87,7 +87,8 @@ int numOfWords(const char* getNum, string* argsTable)
     int index = 0;
     for(int i = 1 ; i < (int)strlen(getNum) ; i++)
     {
-        if((&getNum[i] != " " && &getNum[i - 1] == " ") || (i==1 && &getNum[0] != " " && &getNum[1] == " "))
+
+        if((strcmp(&getNum[i]," ") != 0 && strcmp(&getNum[i-1]," ") == 0) || (i==1 && strcmp(&getNum[0]," ")!=0 && strcmp(&getNum[1]," ")==0))
         {
             count++;
             argsTable[index++] = cur;
@@ -98,7 +99,10 @@ int numOfWords(const char* getNum, string* argsTable)
     }
     return count;
 }
-
+std::string Command::printcomd() const
+{
+    cout<< cmdLine;
+}
 
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
@@ -203,7 +207,7 @@ JobsList::JobEntry * JobsList::getLastStoppedJob(int *jobId)
         else
             return nullptr;
     }
-    return Stopped.back();
+    return &Stopped.back();
 }
 
 int JobsList::getNextPID ()
@@ -341,6 +345,8 @@ status JobsList::JobEntry::getStat()
 void JobsList::JobEntry::printJob()
 {
     cout << "[" << Job_ID << "] " ; ////////////////continue
+    command->printcomd();
+    cout<<" : "<<getpid()<< getCurrentTime();
     if (currentStatus == stopped)
         cout << " (stopped)";
 }
@@ -350,14 +356,35 @@ Command* JobsList::JobEntry::getCommand()
     return command;
 }
 
-void ChmodCommand::execute()
+void chmpromt::execute()
 {
-
+    std::string work;
+    work = newName;
+    int counter=0, count=0;
+    for(int i = 0 ; i < work.length() ; i++)
+    {
+        if(work[i]!=" " && counter<2)
+        {
+            work[count] = work[i];
+            count++;
+        }
+        if(work[i]!= " " && i>0)
+        {
+            if(work[i-1]==" ")
+                counter++;
+        }
+    }
+    work[count]='/0';
+    std::string final=work;
+    if(strlen(final)>8)
+    {
+        changename(final.substr(8,strlen(final)));
+    }
 }
 
 void ShowPidCommand::execute()
 {
-    cout<<"smash pid is "<< getpid() << endl;
+    cout<<"smash pid is "<< getpid();
 }
 
 void GetCurrDirCommand::execute()
@@ -380,7 +407,7 @@ void ChangeDirCommand::execute()
     {
         if(SmallShell::getInstance().listSize() > 0)
         {
-            if(chdir(SmallShell::getInstance().returnPrevious())==-1)
+            if(chdir(SmallShell::getInstance().returnPrevious().c_str())==-1)
                 {
                 //error look at later
                 }
@@ -391,9 +418,9 @@ void ChangeDirCommand::execute()
     }
     else /////////////////////////////////////////////////////////////////
     {
-        std::string cwd = getcwd();
-        SmallShell::getInstance().addCD(cwd);
-        if(chdir(SmallShell::getInstance().returnPrevious())==-1)
+        std::string cwd = current_path();
+        SmallShell::getInstance().addcd(cwd);
+        if(chdir(smash.returnprevois())==-1)
             {
                 //error look at later
             }
@@ -422,5 +449,10 @@ void ForegroundCommand::execute()
 
 void BackgroundCommand::execute()
 {
+}
 
+
+void JobsCommand::execute()
+{
+    SmallShell::getInstance().jobsList->printJobsList();
 }

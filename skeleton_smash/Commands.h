@@ -14,6 +14,7 @@ public:
     Command(const char* cmd_line) : cmdLine(cmd_line){}
     virtual ~Command();
     virtual void execute() = 0;
+    std::string printcomd() const;
     //virtual void prepare();
     //virtual void cleanup();
     // TODO: Add your extra methods if needed
@@ -49,7 +50,12 @@ class RedirectionCommand : public Command {
   //void prepare() override;
   //void cleanup() override;
 };
-
+class chmpromt: public BuiltInCommand{
+public:
+    explicit chmpromt(const char* cmd_line) : BuiltInCommand(cmd_line){}
+    virtual ~chmpromt() = default;
+    void execute() override;
+};
 class ChangeDirCommand : public BuiltInCommand {
 public:
   explicit ChangeDirCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
