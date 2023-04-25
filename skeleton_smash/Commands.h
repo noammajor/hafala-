@@ -35,18 +35,19 @@ public:
   void execute() override;
 };
 
-class RegularCommand : public ExternalCommand
+class SimpleCommand : public ExternalCommand
 {
 public:
-   RegularCommand(const char* cmd_line) : ExternalCommand(cmd_line){}
-   ~RegularCommand() = default override;
+   SimpleCommand(const char* cmd_line) : ExternalCommand(cmd_line){}
+   ~SimpleCommand() = default;
    void execute() override;
 };
+
 class SpecialCommand : public ExternalCommand
 {
 public:
     SpecialCommand(const char* cmd_line) : ExternalCommand(cmd_line){}
-    ~SpecialCommand() = default override;
+    ~SpecialCommand() = default;
     void execute() override;
 };
 class PipeCommand : public Command {
@@ -126,10 +127,9 @@ public:
     std::vector<JobEntry*> FGround;
     std::vector<JobEntry*> BGround;
     std::vector<JobEntry*> Stopped;
-    int Amount;
  // TODO: Add your data members
  public:
-  JobsList(): FGround(), BGround(), Stopped(),Amount(0){}
+  JobsList(): FGround(), BGround(), Stopped(){}
   ~JobsList() = default;
   void addJob(Command* cmd, bool isStopped = false);
   void printJobsList();
@@ -137,8 +137,8 @@ public:
   void removeFinishedJobs();
   JobEntry * getJobById(int jobId);
   void removeJobById(int jobId);
-  JobEntry * getLastJob(int* lastJobId);
-  JobEntry *getLastStoppedJob(int *jobId);
+  JobEntry * getLastJob(int lastJobId);
+  JobEntry *getLastStoppedJob(int jobId);
   int getNextPID ();
   // TODO: Add extra methods or modify existing ones as needed
 };
