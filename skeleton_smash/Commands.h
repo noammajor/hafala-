@@ -189,7 +189,6 @@ class ChmodCommand : public BuiltInCommand {;
 };
 
 class GetFileTypeCommand : public BuiltInCommand {
-  // TODO: Add your data members
  public:
   explicit GetFileTypeCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
   virtual ~GetFileTypeCommand() {}

@@ -600,6 +600,7 @@ void SimpleCommand::execute()
 
 void SpecialCommand::execute()
 {
+    //need to aadd to list
     std::string argsTable[22];
     numOfWords(cmdLine,argsTable);
     argsTable[0]="/bin/bash";
@@ -629,7 +630,7 @@ void PipeCommand::execute()
     numOfWords(cmdLine,argTable);
     CreateCommand(argTable[0].c_str());
 
-    if()/// if it gets "/" arguement
+    if()/// if it gets "|" arguement
     {
         int fd[2]={1,0};
         int suc= pipe(fd);
@@ -660,6 +661,73 @@ void PipeCommand::execute()
 void SetcoreCommand::execute()
 {
     std::string argTable[22];
-    numOfWords(cmdLine,argTable);
+    if(numOfWords(cmdLine,argTable)>3)
+        perror("smash error: setcore: invalid argument");
+    jobId=stoi(argTable[1]);
+    core=stoi(argTable[2]);
+    JobEntry* job;
+    job = getJobById(jobId);
+    if(job == NULL)
+    {
+        std::string message;
+        message= "smash error: setcore: job-id "+jobId+" does not exist";
+        perror(c_str(message));
+    }
+    pid_t PID =job->getPID();///needs to be fixed
+    int NumOfCores = sysconf(_SC_NPROCESSORS_ONLN);
+    if(NumOfCores==SYSCALL_FAILED)
+    {
+        perror("smash error: sysconfig failed");
+        return;
+    }
+    if(core<0 || core>=NumOfCores)
+    {
+        perror("smash error: setcore: invalid core number");
+    }
+    cpu_set_t cpuSet;
+    CPU_ZERO(&cpuSet);
+    CPU_SET(core,&cpuSet);
+    if(sched_setaffinity(job->getPID(),sizeof(cpu_set_t),&cpuSet))
+    {
+        perror("smash error: sched_setaffinity failed");
+        return;
+    }
+}
+
+bool is_file_exist(const char *fileName)
+{
+    std::ifstream infile(fileName);
+    return infile.good();
+}
+
+void GetFileTypeCommand::execute()
+{
+    std::string argTable[22];
+    if(numOfWords(cmdLine,argTable)>2)
+    {
+        perror("smash error: gettype: invalid aruments");
+    }
+    if(!(is_file_exist(c_str(argTable[1]))))
+    {
+        perror("smash error: gettype: invalid aruments");
+    }
+    namespace fs = std::filesystem;
+    switch(argTable[1].type())
+        {
+            case fs::file_type::none: std::cout << " has `not-evaluated-yet` type"; break;
+            case fs::file_type::not_found: std::cout << " does not exist"; break;
+            case fs::file_type::regular: std::cout << " is a regular file"; break;
+            case fs::file_type::directory: std::cout << " is a directory"; break;
+            case fs::file_type::symlink: std::cout << " is a symlink"; break;
+            case fs::file_type::block: std::cout << " is a block device"; break;
+            case fs::file_type::character: std::cout << " is a character device"; break;
+            case fs::file_type::fifo: std::cout << " is a named IPC pipe"; break;
+            case fs::file_type::socket: std::cout << " is a named IPC socket"; break;
+            case fs::file_type::unknown: std::cout << " has `unknown` type"; break;
+            default: std::cout << " has `implementation-defined` type"; break;
+        }
+        ///get file size. fix print.
+
 
 }
+};
