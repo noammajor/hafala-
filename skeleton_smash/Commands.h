@@ -29,7 +29,7 @@ public:
 class ExternalCommand : public Command {
 public:
   ExternalCommand(const char* cmd_line): Command(cmd_line){}
-  virtual ~ExternalCommand() = default;
+  virtual ~ExternalCommand();
   void execute() override;
 };
 
@@ -48,6 +48,7 @@ public:
     ~SpecialCommand() = default;
     void execute() override;
 };
+
 class PipeCommand : public Command {
   // TODO: Add your data members
  public:
@@ -65,12 +66,14 @@ class RedirectionCommand : public Command {
   //void prepare() override;
   //void cleanup() override;
 };
+
 class chmpromt: public BuiltInCommand{
 public:
     explicit chmpromt(const char* cmd_line) : BuiltInCommand(cmd_line){}
     virtual ~chmpromt() = default;
     void execute() override;
 };
+
 class ChangeDirCommand : public BuiltInCommand {
 public:
   explicit ChangeDirCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
@@ -106,38 +109,40 @@ enum status {forground, background, stopped};
 class JobsList {
 public:
     class JobEntry{
-  private:
-      time_t begin;
-      status currentStatus;
-      int Job_ID;
-      Command* command;
-  public:
-      JobEntry(status starting, int id, Command*  cmd) : begin(time(NULL)), currentStatus(starting), Job_ID(id), command(cmd){}
-      ~JobEntry() = default;
-      void setTime(time_t time);
-      time_t getCurrentTime();
-      int getJobId();
-      void changeStatus(status curr);
-      status getStat();
-      void printJob();
-      Command* getCommand();
-  };
-    std::vector<JobEntry*> FGround;
+    private:
+        time_t begin;
+        status currentStatus;
+        int Job_ID;
+        Command* command;
+    public:
+        JobEntry(status starting, int id, Command*  cmd) : begin(time(NULL)), currentStatus(starting), Job_ID(id), command(cmd){}
+        ~JobEntry() = default;
+        time_t getCurrentTime();
+        int getJobId();
+        void changeStatus(status curr);
+        status getStat();
+        void printJob();
+        Command* getCommand();
+    };
+    JobEntry* FGround;
     std::vector<JobEntry*> BGround;
     std::vector<JobEntry*> Stopped;
  // TODO: Add your data members
- public:
-  JobsList(): FGround(), BGround(), Stopped(){}
-  ~JobsList() = default;
-  void addJob(Command* cmd, bool isStopped = false);
-  void printJobsList();
-  void killAllJobs();
-  void removeFinishedJobs();
-  JobEntry * getJobById(int jobId);
-  void removeJobById(int jobId);
-  JobEntry * getLastJob(int lastJobId);
-  JobEntry *getLastStoppedJob(int jobId);
-  int getNextPID ();
+
+public:
+    JobsList(): FGround(nullptr), BGround(), Stopped(){}
+    ~JobsList() = default;
+    void addJob(Command* cmd, bool isStopped = false);
+    void printJobsList();
+    void killAllJobs();
+    void removeFinishedJobs();
+    JobEntry * getJobById(int jobId);
+    void removeJobById(int jobId);
+    JobEntry * getLastJob();
+    JobEntry *getLastStoppedJob();
+    int getNextPID ();
+    void moveToFG(JobEntry* job);
+    void moveToBG(JobEntry* job);
   // TODO: Add extra methods or modify existing ones as needed
 };
 

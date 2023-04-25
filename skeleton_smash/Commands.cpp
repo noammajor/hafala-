@@ -142,8 +142,15 @@ void JobsList::killAllJobs()
 }
 
 void JobsList::removeFinishedJobs()
-{///////////////////
+{
+    for (int i = BGround.size() ; i > 0 ; i--)
+    {
+        if (kill(BGround[i]->getPID(), 0) == -1)
+        {
+            //////////
+        }
 
+    }
 
 }
 
@@ -185,28 +192,20 @@ void JobsList::removeJobById(int jobId)
     }
 }
 
-JobsList::JobEntry * JobsList::getLastJob(int lastJobId)
+JobsList::JobEntry * JobsList::getLastJob()
 {
-    if (lastJobId >  0)
+   /* if (lastJobId >  0)
     {
-        JobEntry *job = getJobById(lastJobId);
+        JobEntry *job = getJobById(lastJobId);  //return nullptr if not exist
         return job;
-    }
+    }*/
     int maxBG = BGround.back()->getJobId();
     int maxStopped = Stopped.back()->getJobId();
     return ( maxBG > maxStopped ? BGround.back() : Stopped.back() );
 }
 
-JobsList::JobEntry * JobsList::getLastStoppedJob(int jobId)
+JobsList::JobEntry * JobsList::getLastStoppedJob()
 {
-    if (jobId > 0)
-    {
-        JobEntry* job = getJobById(jobId);
-        if (job->getStat() == stopped)
-            return job;
-        else
-            return nullptr;
-    }
     return Stopped.back();
 }
 
@@ -215,6 +214,21 @@ int JobsList::getNextPID ()
     int maxBG = BGround.back()->getJobId();
     int maxStopped = Stopped.back()->getJobId();
     return ( maxBG > maxStopped ? maxBG+1 : maxStopped+1 );
+}
+
+
+void JobsList::moveToFG(JobEntry* job)
+{
+    FGround = job;
+    job->changeStatus(forground);
+}
+
+
+void JobsList::moveToBG(JobEntry* job)
+{
+    removeJobById(job->getJobId());
+    job->changeStatus(background);
+    BGround.push_back(job);
 }
 
 
@@ -317,11 +331,6 @@ void SmallShell::executeCommand(const char *cmd_line) {
 }
 
 
-void JobsList::JobEntry::setTime(time_t time)
-{
-    begin = time;
-}
-
 time_t JobsList::JobEntry::getCurrentTime()
 {
     return difftime(this->begin, time(NULL));
@@ -419,7 +428,7 @@ void ChangeDirCommand::execute()
 
 void ForegroundCommand::execute()
 {
-    string args[21];
+    string args[22];
     int argsCount = numOfWords(cmdLine, args);
     if (argsCount == 2)
     {
@@ -429,23 +438,103 @@ void ForegroundCommand::execute()
             int pid = stoi(firstArg);
             if (pid <= 0 )
             {
-                cout << "smash error:fg:job-id " << pid << "does not exist";
+                string error = "smash error:fg:job-id" + to_string(pid) + "does not exist";
+                perror(error.c_str());
+                return;
             }
-            JobsList::JobEntry* job = jobs->getLastJob(pid);
-
-            //move to forground
-
+            JobsList::JobEntry* job = jobs->getJobById(pid);
+            if (!job)
+            {
+                string error = "smash error:fg:job-id" + to_string(pid) + "does not exist";
+                perror(error.c_str());
+                return;
+            }
             jobs->removeJobById(job->getJobId());
+            jobs->moveToFG(job);
+            job->printJob();
+            waitpid(pid);
         }
         catch (exception &e)
         {
-            cout << "smash error:fg:invalid arguments" ;
+            perror("smash error:fg:invalid arguments");
         }
+    }
+    else if (argsCount == 1)
+    {
+        JobsList::JobEntry* job = jobs->getLastJob();
+        if (!job)
+        {
+            perror("jobs list is empty");
+            return;
+        }
+        jobs->removeJobById(job->getJobId());
+        jobs->moveToFG(job);
+        job->printJob();
+        waitpid(job->getJobId());
+    }
+    else
+    {
+        perror("smash error:fg:invalid arguments");
     }
 }
 
 void BackgroundCommand::execute()
 {
+    string args[22];
+    int argsCount = numOfWords(cmdLine, args);
+    if (argsCount == 2)
+    {
+        string firstArg = args[1];
+        try
+        {
+            int pid = stoi(firstArg);
+            if (pid <= 0 )
+            {
+                string error = "smash error:bg:job-id" + to_string(pid) + "does not exist";
+                perror(error.c_str());
+                return;
+            }
+            JobsList::JobEntry* job = jobs->getJobById(pid);
+            if (!job)
+            {
+                string error = "smash error:bg:job-id" + to_string(pid) + "does not exist";
+                perror(error.c_str());
+                return;
+            }
+            else if (job->getStat() != stopped)
+            {
+                string error = "smash error:bg:job-id" + to_string(pid) + "is already running in the background";
+                perror(error.c_str());
+                return;
+            }
+            jobs->moveToBG(job);
+            job->printJob();
+
+             /////////////////////////////////////////////////////////// send SIGCONT
+        }
+        catch (exception &e)
+        {
+            perror("smash error:fg:invalid arguments");
+        }
+    }
+    else if (argsCount == 1)
+    {
+        JobsList::JobEntry* job = jobs->getLastStoppedJob();
+        if (!job)
+        {
+            perror("there is no stopped jobs to resume");
+            return;
+        }
+        jobs->moveToBG(job);
+        job->printJob();
+         //////////////////////////////////////////////////////////// send SIGCONT
+
+
+    }
+    else
+    {
+        perror("smash error:bg:invalid arguments");
+    }
 }
 
 
@@ -458,26 +547,34 @@ void JobsCommand::execute()
 void SimpleCommand::execute()
 {
     std::string argsTable[22];
-    numOfWords(cmdLine,argsTable);
+    int argsCnt = numOfWords(cmdLine,argsTable);
     pid_t child_pid;
     int child_status;
     child_pid = fork();
-    bool exists=false;
-    exists=_isBackgroundComamnd(cmdLine);
-    if(child_pid==-1)
+    bool exists = _isBackgroundComamnd(cmdLine);
+    if (exists)
+    {
+        if (argsTable[argsCnt-1] != "&")
+            argsTable[argsCnt-1].pop_back();
+        else
+            argsTable[argsCnt-1] = "\0";
+    }
+    if(child_pid < 0)
     {
         perror("smash error: fork failed");
     }
-    if(child_pid==0)
+    else if(child_pid == 0)
     {
         execv(argsTable[0].c_str(),argsTable->c_str());
-        exit(0);
+
+        ////////////////error
     }
     else if(!(exists))
     {
-        wait(NULL);
+        waitpid(child_pid);
     }
 }
+
 void SpecialCommand::execute()
 {
     std::string argsTable[22];
