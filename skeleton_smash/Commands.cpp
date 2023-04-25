@@ -110,7 +110,7 @@ void Command::printComd() const
 
 
 /////////////////////////////////////////////////  ExternalCommands   ///////////////////////////////////////////////////////////
-/*
+
 void ExternalCommand::changeFd(const bool append,const std::string directFile)
 {
     int fd;
@@ -127,7 +127,7 @@ void ExternalCommand::changeFd(const bool append,const std::string directFile)
         perror("Cannot open file"); ///not defined in the project
     }
     dup2(1,fd);
-}*/
+}
 
 
 pid_t ExternalCommand::getPid() const
@@ -272,6 +272,7 @@ JobsList::JobEntry* JobsList::getFGjob() const
 {
     return FGround;
 }
+
 /////////////////////////////////////////////////  JobEntry   ///////////////////////////////////////////////////////////
 
 time_t JobsList::JobEntry::getCurrentTime()
