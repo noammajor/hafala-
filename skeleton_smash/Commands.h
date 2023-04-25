@@ -3,6 +3,7 @@
 #include <list>
 #include <vector>
 #include <time.h>
+#include <fstream>
 
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
@@ -10,13 +11,16 @@
 class Command {
 protected:
     const char* cmdLine;
-    fstream my_file;
+    std::fstream my_file;
+    bool fdUsed;
+    pid_t pid;
 public:
-    Command(const char* cmd_line) : cmdLine(cmd_line), fdUsed(false),my_file(NULL){}
+    Command(const char* cmd_line) : cmdLine(cmd_line), fdUsed(false),my_file(NULL), pid(-1){}
     virtual ~Command();
     virtual void execute() = 0;
-    void printcomd() const;
+    void printComd() const;
     void changeFd(const bool append,const std::string directFile);
+    pid_t getPid() const;
     //virtual void prepare();
     //virtual void cleanup();
     // TODO: Add your extra methods if needed
@@ -116,6 +120,7 @@ public:
         status currentStatus;
         int Job_ID;
         Command* command;
+        pid_t pid;
     public:
         JobEntry(status starting, int id, Command*  cmd) : begin(time(NULL)), currentStatus(starting), Job_ID(id), command(cmd){}
         ~JobEntry() = default;
@@ -125,6 +130,8 @@ public:
         status getStat();
         void printJob();
         Command* getCommand();
+        pid_t getPid() const;
+
     };
     JobEntry* FGround;
     std::vector<JobEntry*> BGround;
@@ -182,10 +189,10 @@ class TimeoutCommand : public BuiltInCommand {
 };
 
 class ChmodCommand : public BuiltInCommand {;
- public:
-  explicit ChmodCommand(const char* cmd_line): BuiltInCommand(cmd_line) {}
-  virtual ~ChmodCommand() {}
-  void execute() override;
+public:
+    explicit ChmodCommand(const char* cmd_line): BuiltInCommand(cmd_line) {}
+    virtual ~ChmodCommand() {}
+    void execute() override;
 };
 
 class GetFileTypeCommand : public BuiltInCommand {

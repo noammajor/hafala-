@@ -101,6 +101,7 @@ int numOfWords(const char* getNum, string* argsTable)
     }
     return count;
 }
+
 void Command::changeFd(const bool append,const std::string directFile)
 {
     int fd;
@@ -118,14 +119,23 @@ void Command::changeFd(const bool append,const std::string directFile)
     }
     dup2(1,fd);
 }
-virtual Command::~Command()
+
+
+pid_t Command::getPid() const
+{
+    return pid;
+}
+
+
+Command::~Command()
 {
     if(!(my_file))
     {
         my_file.close();
     }
 }
-void Command::printcomd() const
+
+void Command::printComd() const
 {
     cout<< cmdLine;
 }
@@ -168,13 +178,11 @@ void JobsList::removeFinishedJobs()
 {
     for (int i = BGround.size() ; i > 0 ; i--)
     {
-        if (kill(BGround[i]->getPID(), 0) == -1)
-        {
-            //////////
+        if (kill(BGround[i]->getPid(), 0) == -1) {
+            delete BGround[i];
+            BGround.erase(BGround.begin() + i);
         }
-
     }
-
 }
 
 JobsList::JobEntry * JobsList::getJobById(int jobId)
@@ -377,7 +385,7 @@ status JobsList::JobEntry::getStat()
 void JobsList::JobEntry::printJob()
 {
     cout << "[" << Job_ID << "] " ; ////////////////continue
-    command->printcomd();
+    command->printComd();
     cout<<" : "<<getpid()<< getCurrentTime();
     if (currentStatus == stopped)
         cout << " (stopped)";
@@ -387,6 +395,13 @@ Command* JobsList::JobEntry::getCommand()
 {
     return command;
 }
+
+
+pid_t JobsList::JobEntry::getPid() const
+{
+    return pid;
+}
+
 
 void chmpromt::execute()
 {
@@ -453,6 +468,7 @@ void ForegroundCommand::execute()
 {
     string args[22];
     int argsCount = numOfWords(cmdLine, args);
+    int status;
     if (argsCount == 2)
     {
         string firstArg = args[1];
@@ -461,21 +477,21 @@ void ForegroundCommand::execute()
             int pid = stoi(firstArg);
             if (pid <= 0 )
             {
-                string error = "smash error:fg:job-id" + to_string(pid) + "does not exist";
+                string error = "smash error:fg:job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
                 return;
             }
             JobsList::JobEntry* job = jobs->getJobById(pid);
             if (!job)
             {
-                string error = "smash error:fg:job-id" + to_string(pid) + "does not exist";
+                string error = "smash error:fg:job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
                 return;
             }
             jobs->removeJobById(job->getJobId());
             jobs->moveToFG(job);
             job->printJob();
-            waitpid(pid);
+            waitpid(pid, &status, 0);
         }
         catch (exception &e)
         {
@@ -493,7 +509,7 @@ void ForegroundCommand::execute()
         jobs->removeJobById(job->getJobId());
         jobs->moveToFG(job);
         job->printJob();
-        waitpid(job->getJobId());
+        waitpid(job->getJobId(), , &status, 0);
     }
     else
     {
@@ -520,13 +536,13 @@ void BackgroundCommand::execute()
             JobsList::JobEntry* job = jobs->getJobById(pid);
             if (!job)
             {
-                string error = "smash error:bg:job-id" + to_string(pid) + "does not exist";
+                string error = "smash error:bg:job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
                 return;
             }
             else if (job->getStat() != stopped)
             {
-                string error = "smash error:bg:job-id" + to_string(pid) + "is already running in the background";
+                string error = "smash error:bg:job-id " + to_string(pid) + " is already running in the background";
                 perror(error.c_str());
                 return;
             }
@@ -594,7 +610,8 @@ void SimpleCommand::execute()
     }
     else if(!(exists))
     {
-        waitpid(child_pid);
+        int status;
+        waitpid(child_pid, &status, 0);
     }
 }
 
@@ -627,28 +644,29 @@ void PipeCommand::execute()
 {
     std::string argTable[21];
     numOfWords(cmdLine,argTable);
-    CreateCommand(argTable[0].c_str());
+    SmallShell::getInstance().CreateCommand(argTable[0].c_str());
+    int suc;
+    int fd[2]={1,0};
 
     if()/// if it gets "/" arguement
     {
-        int fd[2]={1,0};
-        int suc= pipe(fd);
+        suc= pipe(fd);
     }
     else
     {
-        int fd[2]={2,0};
-        int suc = pipe(fd);
+        fd[0] = 2;
+        suc = pipe(fd);
     }
     if(suc==-1)
     {
-        perror("pipe unsucssesful");
+        perror("pipe unsuccessful");
     }
     pid_t child_pid;
     int child_status;
     child_pid=fork();
     if(child_pid==0)
     {
-        CreateCommand(argTable[2].c_str()); //need to see how we send arguments
+        SmallShell::getInstance().CreateCommand(argTable[2].c_str()); //need to see how we send arguments
         close(fd[1]);
     }
     else
