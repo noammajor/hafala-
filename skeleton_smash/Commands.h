@@ -10,17 +10,19 @@
 class Command {
 protected:
     const char* cmdLine;
+    fstream my_file;
 public:
-    Command(const char* cmd_line) : cmdLine(cmd_line){}
+    Command(const char* cmd_line) : cmdLine(cmd_line), fdUsed(false),my_file(NULL){}
     virtual ~Command();
     virtual void execute() = 0;
     void printcomd() const;
+    void changeFd(const bool append,const std::string directFile);
     //virtual void prepare();
     //virtual void cleanup();
     // TODO: Add your extra methods if needed
 };
 
-class BuiltInCommand : public Command {
+class BuiltInCommand : public Command{
 public:
     BuiltInCommand(const char* cmd_line): Command(cmd_line){}
     virtual ~BuiltInCommand() {}
@@ -190,9 +192,10 @@ class GetFileTypeCommand : public BuiltInCommand {
 };
 
 class SetcoreCommand : public BuiltInCommand {
-  // TODO: Add your data members
+  int jobId;
+  int core;
  public:
-  explicit SetcoreCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
+  explicit SetcoreCommand(const char* cmd_line): BuiltInCommand(cmd_line),jobId(0),core(0){}
   virtual ~SetcoreCommand() {}
   void execute() override;
 };

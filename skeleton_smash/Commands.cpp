@@ -100,7 +100,30 @@ int numOfWords(const char* getNum, string* argsTable)
     }
     return count;
 }
-
+void Command::changeFd(const bool append,const std::string directFile)
+{
+    int fd;
+    if(append)
+    {
+        fd=my_file.open(directFile, ios:: app | ios::out);
+    }
+    if(!(append))
+    {
+        fd=my_file.open(directFile,ios::trunc | ios::out);
+    }
+    if(!(my_file))
+    {
+        perror("Cannot open file"); ///not defined in the project
+    }
+    dup2(1,fd);
+}
+virtual Command::~Command()
+{
+    if(!(my_file))
+    {
+        my_file.close();
+    }
+}
 void Command::printcomd() const
 {
     cout<< cmdLine;
@@ -378,8 +401,8 @@ void ShowPidCommand::execute()
 
 void GetCurrDirCommand::execute()
 {
-    char cwd[200];
-    getcwd(cwd,200);
+    char cwd[1024];
+    getcwd(cwd,1024);
     cout<<cwd;
 }
 
@@ -390,9 +413,9 @@ void ChangeDirCommand::execute()
     ///must put the string in cut
     if(numOfWords(cmdLine, args) > 2)
     {
-        cout<< "smash error: cd: too many arguments";
+        perror("smash error: cd: too many arguments");
     }
-    if(*cmdLine == '-')
+    if(*cmdLine == '-')//not correct
     {
         if(SmallShell::getInstance().listSize() > 0)
         {
@@ -403,12 +426,12 @@ void ChangeDirCommand::execute()
             SmallShell::getInstance().removeCD();
         }
         else
-            cout<<"smash error: cd: OLDPWD not set";
+            perror("smash error: cd: OLDPWD not set");
     }
     else /////////////////////////////////////////////////////////////////
     {
-        char cwd[200];
-        getcwd(cwd, 200);
+        char cwd[1024];
+        getcwd(cwd, 1024);
         SmallShell::getInstance().addCD( cwd);
         if(chdir(SmallShell::getInstance().returnPrevious().c_str())==-1)
             {
@@ -494,5 +517,45 @@ void SpecialCommand::execute()
     {
         wait(NULL);
     }
+
+}
+void PipeCommand::execute()
+{
+    std::string argTable[21];
+    numOfWords(cmdLine,argTable);
+    CreateCommand(argTable[0].c_str());
+
+    if()/// if it gets "/" arguement
+    {
+        int fd[2]={1,0};
+        int suc= pipe(fd);
+    }
+    else
+    {
+        int fd[2]={2,0};
+        int suc = pipe(fd);
+    }
+    if(suc==-1)
+    {
+        perror("pipe unsucssesful");
+    }
+    pid_t child_pid;
+    int child_status;
+    child_pid=fork();
+    if(child_pid==0)
+    {
+        CreateCommand(argTable[2].c_str()); //need to see how we send arguments
+        close(fd[1]);
+    }
+    else
+    {
+        close(fd[0]);
+    }
+}
+
+void SetcoreCommand::execute()
+{
+    std::string argTable[22];
+    numOfWords(cmdLine,argTable);
 
 }
