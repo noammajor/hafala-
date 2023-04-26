@@ -144,6 +144,7 @@ public:
         void printJob();
         Command* getCommand();
         pid_t getPid() const;
+        void FGjobID();
 
     };
     JobEntry* FGround;
@@ -162,10 +163,11 @@ public:
     void removeJobById(int jobId);
     JobEntry * getLastJob();
     JobEntry *getLastStoppedJob();
-    int getNextPID ();
+    int getNextJobID ();
     void moveToFG(JobEntry* job);
     void moveToBG(JobEntry* job);
     void addToFG(JobEntry* job);
+    void addToStopped(JobEntry* job);
     JobEntry* getFGjob() const;
   // TODO: Add extra methods or modify existing ones as needed
 };

@@ -150,12 +150,12 @@ void JobsList::addJob(Command* cmd, bool isStopped)
 {
     if (isStopped)
     {
-        JobEntry job = JobEntry(stopped, getNextPID(), cmd);
+        JobEntry job = JobEntry(stopped, getNextJobID(), cmd);
         Stopped.push_back(&job);
     }
     else
     {
-        JobEntry job = JobEntry(background, getNextPID(), cmd);
+        JobEntry job = JobEntry(background, getNextJobID(), cmd);
         Stopped.push_back(&job);
     }
 }
@@ -241,7 +241,7 @@ JobsList::JobEntry * JobsList::getLastStoppedJob()
     return Stopped.back();
 }
 
-int JobsList::getNextPID ()
+int JobsList::getNextJobID ()
 {
     int maxBG = BGround.back()->getJobId();
     int maxStopped = Stopped.back()->getJobId();
@@ -266,6 +266,11 @@ void JobsList::moveToBG(JobEntry* job)
 void JobsList::addToFG(JobEntry* job)
 {
     FGround = job;
+}
+
+void JobsList::addToStopped(JobEntry* job)
+{
+    Stopped.push_back(job);
 }
 
 JobsList::JobEntry* JobsList::getFGjob() const
@@ -313,6 +318,11 @@ Command* JobsList::JobEntry::getCommand()
 pid_t JobsList::JobEntry::getPid() const
 {
     return pid;
+}
+
+void JobsList::JobEntry::FGjobID()
+{
+    Job_ID = -1;
 }
 
 /////////////////////////////////////////////////  SmallShell   ///////////////////////////////////////////////////////////
@@ -666,6 +676,7 @@ void ComplexCommand::execute()
         pid_t pid = getpid();
         cmdPid = pid;
         JobsList::JobEntry* job = new JobsList::JobEntry(forground, pid, this);
+        job->FGjobID();
         SmallShell::getInstance().getJobs()->addToFG(job);
         setpgrp();
         execv(argsTable[0].c_str(),argsTable->c_str());
