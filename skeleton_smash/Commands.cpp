@@ -7,6 +7,7 @@
 #include <iomanip>
 #include "Commands.h"
 #include <cstring>
+#include <filesystem>
 
 
 using namespace std;
@@ -712,22 +713,20 @@ void GetFileTypeCommand::execute()
         perror("smash error: gettype: invalid aruments");
     }
     namespace fs = std::filesystem;
+    std::string output;
+     output = argTable[0] + "\'s" + " type is ";
     switch(argTable[1].type())
         {
-            case fs::file_type::none: std::cout << " has `not-evaluated-yet` type"; break;
-            case fs::file_type::not_found: std::cout << " does not exist"; break;
-            case fs::file_type::regular: std::cout << " is a regular file"; break;
-            case fs::file_type::directory: std::cout << " is a directory"; break;
-            case fs::file_type::symlink: std::cout << " is a symlink"; break;
-            case fs::file_type::block: std::cout << " is a block device"; break;
-            case fs::file_type::character: std::cout << " is a character device"; break;
-            case fs::file_type::fifo: std::cout << " is a named IPC pipe"; break;
-            case fs::file_type::socket: std::cout << " is a named IPC socket"; break;
-            case fs::file_type::unknown: std::cout << " has `unknown` type"; break;
-            default: std::cout << " has `implementation-defined` type"; break;
+            case fs::file_type::regular: output= output + "\"regular file\""; break;
+            case fs::file_type::directory: output= output + "\"directory file\""; break;
+            case fs::file_type::symlink: output= output + "\"symbolic link file\""; break;
+            case fs::file_type::block: output= output + "\"block file\""; break;
+            case fs::file_type::character:output= output + "\"character file\""; break;
+            case fs::file_type::fifo: output= output + "\"FIFO file\""; break;
+            case fs::file_type::socket: output= output + "\"socket file\""; break;
         }
-        ///get file size. fix print.
-
-
+        int fileSize= std::filesystem::file_size(argTable[0]);
+        output = output + " and takes up " + fileSize + " bytes";
+        cout << output;
 }
 };
