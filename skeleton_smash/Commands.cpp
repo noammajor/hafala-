@@ -25,6 +25,9 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 #define FUNC_EXIT()
 #endif
 
+
+///////////////////////////////////////////////  General Functions   ///////////////////////////////////////////////////////////
+
 string _ltrim(const std::string& s)
 {
   size_t start = s.find_first_not_of(WHITESPACE);
@@ -43,44 +46,41 @@ string _trim(const std::string& s)
 }
 
 int _parseCommandLine(const char* cmd_line, char** args) {
-  FUNC_ENTRY()
-  int i = 0;
-  std::istringstream iss(_trim(string(cmd_line)).c_str());
-  for(std::string s; iss >> s; ) {
-    args[i] = (char*)malloc(s.length()+1);
-    memset(args[i], 0, s.length()+1);
-    strcpy(args[i], s.c_str());
-    args[++i] = NULL;
-  }
-  return i;
-
-  FUNC_EXIT()
+    FUNC_ENTRY()
+    int i = 0;
+    std::istringstream iss(_trim(string(cmd_line)).c_str());
+    for(std::string s; iss >> s; ) {
+        args[i] = (char*)malloc(s.length()+1);
+        memset(args[i], 0, s.length()+1);
+        strcpy(args[i], s.c_str());
+        args[++i] = NULL;
+    }
+    return i;
+    FUNC_EXIT()
 }
 
 bool _isBackgroundComamnd(const char* cmd_line) {
-  const string str(cmd_line);
-  return str[str.find_last_not_of(WHITESPACE)] == '&';
+    const string str(cmd_line);
+    return str[str.find_last_not_of(WHITESPACE)] == '&';
 }
 
 void _removeBackgroundSign(char* cmd_line) {
-  const string str(cmd_line);
-  // find last character other than spaces
-  unsigned int idx = str.find_last_not_of(WHITESPACE);
-  // if all characters are spaces then return
-  if (idx == string::npos) {
-    return;
-  }
-  // if the command line does not end with & then return
-  if (cmd_line[idx] != '&') {
-    return;
-  }
-  // replace the & (background sign) with space and then remove all tailing spaces.
-  cmd_line[idx] = ' ';
-  // truncate the command line string up to the last non-space character
-  cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
+    const string str(cmd_line);
+    // find last character other than spaces
+    unsigned int idx = str.find_last_not_of(WHITESPACE);
+    // if all characters are spaces then return
+    if (idx == string::npos) {
+        return;
+    }
+    // if the command line does not end with & then return
+    if (cmd_line[idx] != '&') {
+        return;
+    }
+    // replace the & (background sign) with space and then remove all tailing spaces.
+    cmd_line[idx] = ' ';
+    // truncate the command line string up to the last non-space character
+    cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
-
-// TODO: Add your implementation for classes in Commands.h 
 
 int numOfWords(const char* getNum, string* argsTable)
 {
@@ -102,7 +102,17 @@ int numOfWords(const char* getNum, string* argsTable)
     }
     return count;
 }
-void Command::changeFd(const bool append,const std::string directFile)
+///////////////////////////////////////////////////////   Commands   ///////////////////////////////////////////////////////////
+
+void Command::printComd() const
+{
+    cout<< cmdLine;
+}
+
+
+/////////////////////////////////////////////////  ExternalCommands   ///////////////////////////////////////////////////////////
+
+void ExternalCommand::changeFd(const bool append,const std::string directFile)
 {
     int fd;
     if(append)
@@ -119,28 +129,34 @@ void Command::changeFd(const bool append,const std::string directFile)
     }
     dup2(1,fd);
 }
-virtual Command::~Command()
+
+
+pid_t ExternalCommand::getPid() const
+{
+    return cmdPid;
+}
+
+
+ExternalCommand::~ExternalCommand()
 {
     if(!(my_file))
     {
         my_file.close();
     }
 }
-void Command::printcomd() const
-{
-    cout<< cmdLine;
-}
+
+/////////////////////////////////////////////////  Jobs   ///////////////////////////////////////////////////////////
 
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
     if (isStopped)
     {
-        JobEntry job = JobEntry(stopped, getNextPID(), cmd);
+        JobEntry job = JobEntry(stopped, getNextJobID(), cmd);
         Stopped.push_back(&job);
     }
     else
     {
-        JobEntry job = JobEntry(background, getNextPID(), cmd);
+        JobEntry job = JobEntry(background, getNextJobID(), cmd);
         Stopped.push_back(&job);
     }
 }
@@ -169,13 +185,11 @@ void JobsList::removeFinishedJobs()
 {
     for (int i = BGround.size() ; i > 0 ; i--)
     {
-        if (kill(BGround[i]->getPID(), 0) == -1)
-        {
-            //////////
+        if (kill(BGround[i]->getPid(), 0) == -1) {
+            delete BGround[i];
+            BGround.erase(BGround.begin() + i);
         }
-
     }
-
 }
 
 JobsList::JobEntry * JobsList::getJobById(int jobId)
@@ -218,11 +232,6 @@ void JobsList::removeJobById(int jobId)
 
 JobsList::JobEntry * JobsList::getLastJob()
 {
-   /* if (lastJobId >  0)
-    {
-        JobEntry *job = getJobById(lastJobId);  //return nullptr if not exist
-        return job;
-    }*/
     int maxBG = BGround.back()->getJobId();
     int maxStopped = Stopped.back()->getJobId();
     return ( maxBG > maxStopped ? BGround.back() : Stopped.back() );
@@ -233,7 +242,7 @@ JobsList::JobEntry * JobsList::getLastStoppedJob()
     return Stopped.back();
 }
 
-int JobsList::getNextPID ()
+int JobsList::getNextJobID ()
 {
     int maxBG = BGround.back()->getJobId();
     int maxStopped = Stopped.back()->getJobId();
@@ -255,6 +264,69 @@ void JobsList::moveToBG(JobEntry* job)
     BGround.push_back(job);
 }
 
+void JobsList::addToFG(JobEntry* job)
+{
+    FGround = job;
+}
+
+void JobsList::addToStopped(JobEntry* job)
+{
+    Stopped.push_back(job);
+}
+
+JobsList::JobEntry* JobsList::getFGjob() const
+{
+    return FGround;
+}
+
+/////////////////////////////////////////////////  JobEntry   ///////////////////////////////////////////////////////////
+
+time_t JobsList::JobEntry::getCurrentTime()
+{
+    return difftime(this->begin, time(NULL));
+}
+
+int JobsList::JobEntry::getJobId()
+{
+    return Job_ID;
+}
+
+void JobsList::JobEntry::changeStatus(status curr)
+{
+    currentStatus = curr;
+}
+
+status JobsList::JobEntry::getStat()
+{
+    return currentStatus;
+}
+
+void JobsList::JobEntry::printJob()
+{
+    cout << "[" << Job_ID << "] " ; ////////////////continue
+    command->printComd();
+    cout<<" : "<<getpid()<< getCurrentTime();
+    if (currentStatus == stopped)
+        cout << " (stopped)";
+}
+
+Command* JobsList::JobEntry::getCommand()
+{
+    return command;
+}
+
+
+pid_t JobsList::JobEntry::getPid() const
+{
+    return pid;
+}
+
+void JobsList::JobEntry::FGjobID()
+{
+    Job_ID = -1;
+}
+
+/////////////////////////////////////////////////  SmallShell   ///////////////////////////////////////////////////////////
 
 int SmallShell::listSize() const
 {
@@ -301,15 +373,27 @@ JobsList* SmallShell::getJobs()
     return jobsList;
 }
 
-
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
 Command * SmallShell::CreateCommand(const char* cmd_line) {
 	// For example:
+    string cmd_s = _trim(string(cmd_line));
+    string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
 
-  string cmd_s = _trim(string(cmd_line));
-  string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+    if (cmd_s.find("|") < cmd_s.length()) {
+        return new PipeCommand(cmd_line);
+    }
+    if (cmd_s.find(">>") < cmd_s.length()) {
+        return new PipeCommand(cmd_line); //////////////////////////////pipe command?
+    }
+    if (cmd_s.find(">") < cmd_s.length()) {
+        return new PipeCommand(cmd_line);
+    }
+
+    if (cmd_s.find("*") < cmd_s.length() || cmd_s.find("?") < cmd_s.length()) {
+        return new ComplexCommand(cmd_line);
+    }
 
     if (firstWord.compare("chprompt") == 0) {
         return new ChmodCommand(cmd_line); ///////////////////////////
@@ -338,12 +422,10 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     else if (firstWord.compare("kill") == 0) {
         return new KillCommand(cmd_line, jobsList);
     }
-
-  else {
-    return new ExternalCommand(cmd_line);
-  }
-
-  return nullptr;
+    else
+    {
+    return new SimpleCommand(cmd_line);
+    }
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
@@ -354,40 +436,7 @@ void SmallShell::executeCommand(const char *cmd_line) {
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
-
-time_t JobsList::JobEntry::getCurrentTime()
-{
-    return difftime(this->begin, time(NULL));
-}
-
-int JobsList::JobEntry::getJobId()
-{
-    return Job_ID;
-}
-
-void JobsList::JobEntry::changeStatus(status curr)
-{
-    currentStatus = curr;
-}
-
-status JobsList::JobEntry::getStat()
-{
-    return currentStatus;
-}
-
-void JobsList::JobEntry::printJob()
-{
-    cout << "[" << Job_ID << "] " ; ////////////////continue
-    command->printcomd();
-    cout<<" : "<<getpid()<< getCurrentTime();
-    if (currentStatus == stopped)
-        cout << " (stopped)";
-}
-
-Command* JobsList::JobEntry::getCommand()
-{
-    return command;
-}
+/////////////////////////////////////////////////  Execute Commands   ///////////////////////////////////////////////////////////
 
 void chmpromt::execute()
 {
@@ -454,6 +503,7 @@ void ForegroundCommand::execute()
 {
     string args[22];
     int argsCount = numOfWords(cmdLine, args);
+    int status;
     if (argsCount == 2)
     {
         string firstArg = args[1];
@@ -462,21 +512,21 @@ void ForegroundCommand::execute()
             int pid = stoi(firstArg);
             if (pid <= 0 )
             {
-                string error = "smash error:fg:job-id" + to_string(pid) + "does not exist";
+                string error = "smash error:fg:job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
                 return;
             }
             JobsList::JobEntry* job = jobs->getJobById(pid);
             if (!job)
             {
-                string error = "smash error:fg:job-id" + to_string(pid) + "does not exist";
+                string error = "smash error:fg:job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
                 return;
             }
             jobs->removeJobById(job->getJobId());
             jobs->moveToFG(job);
             job->printJob();
-            waitpid(pid);
+            waitpid(pid, &status, 0);
         }
         catch (exception &e)
         {
@@ -494,7 +544,7 @@ void ForegroundCommand::execute()
         jobs->removeJobById(job->getJobId());
         jobs->moveToFG(job);
         job->printJob();
-        waitpid(job->getJobId());
+        waitpid(job->getJobId(), &status, 0);
     }
     else
     {
@@ -521,20 +571,19 @@ void BackgroundCommand::execute()
             JobsList::JobEntry* job = jobs->getJobById(pid);
             if (!job)
             {
-                string error = "smash error:bg:job-id" + to_string(pid) + "does not exist";
+                string error = "smash error:bg:job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
                 return;
             }
             else if (job->getStat() != stopped)
             {
-                string error = "smash error:bg:job-id" + to_string(pid) + "is already running in the background";
+                string error = "smash error:bg:job-id " + to_string(pid) + " is already running in the background";
                 perror(error.c_str());
                 return;
             }
             jobs->moveToBG(job);
             job->printJob();
-
-             /////////////////////////////////////////////////////////// send SIGCONT
+            kill(pid, SIGCONT);
         }
         catch (exception &e)
         {
@@ -551,9 +600,7 @@ void BackgroundCommand::execute()
         }
         jobs->moveToBG(job);
         job->printJob();
-         //////////////////////////////////////////////////////////// send SIGCONT
-
-
+        kill(job->getPid(), SIGCONT);
     }
     else
     {
@@ -582,6 +629,7 @@ void SimpleCommand::execute()
             argsTable[argsCnt-1].pop_back();
         else
             argsTable[argsCnt-1] = "\0";
+        SmallShell::getInstance().getJobs()->addJob(this);
     }
     if(child_pid < 0)
     {
@@ -589,68 +637,89 @@ void SimpleCommand::execute()
     }
     else if(child_pid == 0)
     {
+        pid_t pid = getpid();
+        cmdPid = pid;
+        setpgrp();
         execv(argsTable[0].c_str(),argsTable->c_str());
-
-        ////////////////error
+        perror("smash error: execv failed");
+        exit();
     }
     else if(!(exists))
     {
-        waitpid(child_pid);
+        int status;
+        waitpid(child_pid, &status, 0);
     }
 }
 
-void SpecialCommand::execute()
+void ComplexCommand::execute()
 {
-    //need to aadd to list
     std::string argsTable[22];
-    numOfWords(cmdLine,argsTable);
+    int argsCnt = numOfWords(cmdLine,argsTable);
     argsTable[0]="/bin/bash";
     pid_t child_pid;
     int child_status;
-    child_pid=fork();
-    bool exists=false;
-    exists=_isBackgroundComamnd(cmdLine);
-    if(child_pid==-1)
+    child_pid = fork();
+    bool exists = _isBackgroundComamnd(cmdLine);
+    if (exists)
+    {
+        if (argsTable[argsCnt-1] != "&")
+            argsTable[argsCnt-1].pop_back();
+        else
+            argsTable[argsCnt-1] = "\0";
+        SmallShell::getInstance().getJobs()->addJob(this);
+    }
+    if(child_pid < 0)
     {
         perror("smash error: fork failed");
     }
-    if(child_pid==0)
+    if(child_pid == 0)
     {
+        pid_t pid = getpid();
+        cmdPid = pid;
+        JobsList::JobEntry* job = new JobsList::JobEntry(forground, pid, this);
+        job->FGjobID();
+        SmallShell::getInstance().getJobs()->addToFG(job);
+        setpgrp();
         execv(argsTable[0].c_str(),argsTable->c_str());
-        exit(0);
+        perror("smash error: execv failed");
+        exit();
     }
     else if(!(exists))
     {
-        wait(NULL);
+        int status;
+        waitpid(child_pid, &status, 0);
     }
 
 }
+
 void PipeCommand::execute()
 {
     std::string argTable[21];
     numOfWords(cmdLine,argTable);
-    CreateCommand(argTable[0].c_str());
+    SmallShell::getInstance().CreateCommand(argTable[0].c_str());
+    int suc;
+    int fd[2]={1,0};
 
     if()/// if it gets "|" arguement
     {
-        int fd[2]={1,0};
-        int suc= pipe(fd);
+        suc= pipe(fd);
     }
     else
     {
-        int fd[2]={2,0};
-        int suc = pipe(fd);
+        fd[0] = 2;
+        suc = pipe(fd);
     }
     if(suc==-1)
     {
-        perror("pipe unsucssesful");
+        perror("pipe unsuccessful");
     }
     pid_t child_pid;
     int child_status;
-    child_pid=fork();
-    if(child_pid==0)
+    child_pid = fork();
+    if(child_pid == 0)
     {
-        CreateCommand(argTable[2].c_str()); //need to see how we send arguments
+        setpgrp();
+        SmallShell::getInstance().CreateCommand(argTable[2].c_str()); //need to see how we send arguments
         close(fd[1]);
     }
     else
@@ -664,43 +733,37 @@ void SetcoreCommand::execute()
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>3)
         perror("smash error: setcore: invalid argument");
-    jobId=stoi(argTable[1]);
-    core=stoi(argTable[2]);
-    JobEntry* job;
-    job = getJobById(jobId);
+    jobId = stoi(argTable[1]);        /////////////////////try and catch
+    core = stoi(argTable[2]);
+    JobsList::JobEntry* job;
+    job = SmallShell::getInstance().getJobs()->getJobById(jobId);
     if(job == NULL)
     {
-        std::string message;
-        message= "smash error: setcore: job-id "+jobId+" does not exist";
-        perror(c_str(message));
+        std::string message = "smash error: setcore: job-id "+ to_string(jobId) +" does not exist";
+        perror(message.c_str());
     }
-    pid_t PID =job->getPID();///needs to be fixed
+    pid_t PID =job->getPid();
     int NumOfCores = sysconf(_SC_NPROCESSORS_ONLN);
-    if(NumOfCores==SYSCALL_FAILED)
+    if(NumOfCores == SYSCALL_FAILED)
     {
         perror("smash error: sysconfig failed");
         return;
     }
-    if(core<0 || core>=NumOfCores)
+    if(core < 0 || core >= NumOfCores)
     {
         perror("smash error: setcore: invalid core number");
     }
     cpu_set_t cpuSet;
     CPU_ZERO(&cpuSet);
     CPU_SET(core,&cpuSet);
-    if(sched_setaffinity(job->getPID(),sizeof(cpu_set_t),&cpuSet))
+    if(sched_setaffinity(job->getPid(),sizeof(cpu_set_t),&cpuSet))
     {
         perror("smash error: sched_setaffinity failed");
         return;
     }
 }
 
-bool is_file_exist(const char *fileName)
-{
-    std::ifstream infile(fileName);
-    return infile.good();
-}
-
+/*
 void GetFileTypeCommand::execute()
 {
     std::string argTable[22];
@@ -708,7 +771,7 @@ void GetFileTypeCommand::execute()
     {
         perror("smash error: gettype: invalid aruments");
     }
-    if(!(is_file_exist(c_str(argTable[1]))))
+    if(!(is_file_exist(argTable[1].c_str())))
     {
         perror("smash error: gettype: invalid aruments");
     }
@@ -729,4 +792,10 @@ void GetFileTypeCommand::execute()
         output = output + " and takes up " + fileSize + " bytes";
         cout << output;
 }
-};
+*/
+
+bool is_file_exist(const char *fileName)
+{
+    std::ifstream infile(fileName);
+    return infile.good();
+}
