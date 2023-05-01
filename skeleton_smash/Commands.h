@@ -65,7 +65,6 @@ public:
 };
 
 class RedirectionCommand : public Command {
-    std::fstream my_file;
 public:
     explicit RedirectionCommand(const char* cmd_line): Command(cmd_line){}
     ~RedirectionCommand() override = default;

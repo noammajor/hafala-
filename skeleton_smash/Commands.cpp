@@ -103,7 +103,7 @@ int numOfWords(const char* getNum, string* argsTable)
     return count;
 }
 
-char** splitByArg(char* line, char* arg)
+char** splitByArg(const char* line, char arg)
 {
     char* result[2];
     string lineString = line;
@@ -113,8 +113,6 @@ char** splitByArg(char* line, char* arg)
     }
     result[0] += 0;
     int j = (int)lineString.find(arg) + 1;
-    if (arg[1] != 0)
-        j++;
     for ( ; lineString[j] != 0 ; j++)
         result[1] += lineString[j];
     result[1] += 0;
@@ -818,39 +816,42 @@ public:
     //void prepare() override;
     //void cleanup() override;
 };
+
 void RedirectionCommand::execute()
 {
-    bool append = doesneedtoappend(cmdLine);
-    pid_t child=fork();
-    if(child<0)
+    string s = cmdLine;
+    char** lines = splitByArg(cmdLine,'>');
+    bool append = false;
+    if(s.find(">>"))
+    {
+        append = true;
+        lines[1] = lines[1]+1;
+    }
+    pid_t child = fork();
+    if(child < 0)
     {
         perror("smash error: fork failed");
     }
-    if(child==0)
+    if(child == 0)
     {
         int fd;
         if(append)
         {
-            fd=my_file.open(directFile, ios:: app | ios::out);
+            fd = open(lines[1], ios:: app | ios::out);
         }
-        if(!(append))
+        else  if(!(append))
         {
-            fd=my_file.open(directFile,ios::trunc | ios::out);
+            fd = open(lines[1],ios::trunc | ios::out);
         }
-        if(!(my_file))
-        {
-            perror("Cannot open file"); ///not defined in the project
-        }
-        dup2(1,fd);
-        char* newCommandLine;
-        splitByArg(cmdLine,newCommandLine);
-        SmallShell::getInstance().CreateCommand(newCommandLine);
+        dup2(fd,1);
+        SmallShell::getInstance().CreateCommand(lines[0]);
     }
-    if(child>0)
+    if(child > 0)
     {
+        int stat;
         if( wait(&stat) < 0 )
             perror("wait failed");
         else
-        chkStatus(child,stat);
+            chkStatus(child,stat);
     }
 }
