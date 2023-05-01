@@ -763,7 +763,7 @@ void SetcoreCommand::execute()
     }
 }
 
-/*
+
 void GetFileTypeCommand::execute()
 {
     std::string argTable[22];
@@ -792,10 +792,21 @@ void GetFileTypeCommand::execute()
         output = output + " and takes up " + fileSize + " bytes";
         cout << output;
 }
-*/
 
 bool is_file_exist(const char *fileName)
 {
     std::ifstream infile(fileName);
     return infile.good();
+}
+
+void ChmodCommand::execute()
+{
+    std::string argTable[22];
+    if(numOfWords(cmdLine,argTable)>3)
+    {
+        perror("smash error: gettype: invalid aruments");
+    }
+    const char* filename =  c_str(argTable[2]);
+    int permissions = std::stoi(argTable[1], nullptr, 8);
+    int result = chmod(filename, permissions);
 }
