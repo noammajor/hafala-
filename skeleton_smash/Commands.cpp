@@ -131,25 +131,6 @@ void Command::printComd() const
 
 /////////////////////////////////////////////////  ExternalCommands   ///////////////////////////////////////////////////////////
 
-void ExternalCommand::changeFd(const bool append,const std::string directFile)
-{
-    int fd;
-    if(append)
-    {
-        fd=my_file.open(directFile, ios:: app | ios::out);
-    }
-    if(!(append))
-    {
-        fd=my_file.open(directFile,ios::trunc | ios::out);
-    }
-    if(!(my_file))
-    {
-        perror("Cannot open file"); ///not defined in the project
-    }
-    dup2(1,fd);
-}
-
-
 pid_t ExternalCommand::getPid() const
 {
     return cmdPid;
@@ -826,4 +807,50 @@ void ChmodCommand::execute()
     const char* filename =  c_str(argTable[2]);
     int permissions = std::stoi(argTable[1], nullptr, 8);
     int result = chmod(filename, permissions);
+}
+
+class RedirectionCommand : public Command {
+    std::fstream my_file;
+public:
+    explicit RedirectionCommand(const char* cmd_line): Command(cmd_line){}
+    ~RedirectionCommand() override = default;
+    void execute() override;
+    //void prepare() override;
+    //void cleanup() override;
+};
+void RedirectionCommand::execute()
+{
+    bool append = doesneedtoappend(cmdLine);
+    pid_t child=fork();
+    if(child<0)
+    {
+        perror("smash error: fork failed");
+    }
+    if(child==0)
+    {
+        int fd;
+        if(append)
+        {
+            fd=my_file.open(directFile, ios:: app | ios::out);
+        }
+        if(!(append))
+        {
+            fd=my_file.open(directFile,ios::trunc | ios::out);
+        }
+        if(!(my_file))
+        {
+            perror("Cannot open file"); ///not defined in the project
+        }
+        dup2(1,fd);
+        char* newCommandLine;
+        splitByArg(cmdLine,newCommandLine);
+        SmallShell::getInstance().CreateCommand(newCommandLine);
+    }
+    if(child>0)
+    {
+        if( wait(&stat) < 0 )
+            perror("wait failed");
+        else
+        chkStatus(child,stat);
+    }
 }
