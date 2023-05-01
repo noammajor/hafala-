@@ -103,13 +103,20 @@ int numOfWords(const char* getNum, string* argsTable)
     return count;
 }
 
-char** splitByArg(const char* line, char arg)
+const char** splitByArg(const char* line, char arg)
 {
-    char* result[2];
+    const char* result[2];
     string lineString = line;
     for (int i = 0 ; i < lineString.find(arg) ; i++)
     {
         result[0] += lineString[i];
+    }
+    if (_isBackgroundComamnd(line))
+    {
+        result[0] += '&';
+        string second = result[1];
+        second[second.length()-1] = 0;
+        result[1] = second.c_str();
     }
     result[0] += 0;
     int j = (int)lineString.find(arg) + 1;
@@ -812,7 +819,7 @@ void ChmodCommand::execute()
 void RedirectionCommand::execute()
 {
     string s = cmdLine;
-    char** lines = splitByArg(cmdLine,'>');
+    const char** lines = splitByArg(cmdLine,'>');
     bool append = false;
     if(s.find(">>"))
     {

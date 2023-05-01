@@ -75,7 +75,7 @@ public:
 
 ///////////////////////////////////////////////  BuiltInCommands   ///////////////////////////////////////////////////////////
 
-class chmpromt: public BuiltInCommand{
+class chmpromt: public BuiltInCommand {
 public:
     explicit chmpromt(const char* cmd_line) : BuiltInCommand(cmd_line){}
     virtual ~chmpromt() = default;
