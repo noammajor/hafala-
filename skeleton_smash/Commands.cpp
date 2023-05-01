@@ -800,22 +800,14 @@ void ChmodCommand::execute()
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>3)
     {
-        perror("smash error: gettype: invalid aruments");
+        perror("smash error: gettype: invalid arguments");
     }
-    const char* filename =  c_str(argTable[2]);
+    const char* filename = argTable[2].c_str();
     int permissions = std::stoi(argTable[1], nullptr, 8);
     int result = chmod(filename, permissions);
+    if (result == -1)
+        perror("smash error: chmod failed"); //////////////////////////////////// error?
 }
-
-class RedirectionCommand : public Command {
-    std::fstream my_file;
-public:
-    explicit RedirectionCommand(const char* cmd_line): Command(cmd_line){}
-    ~RedirectionCommand() override = default;
-    void execute() override;
-    //void prepare() override;
-    //void cleanup() override;
-};
 
 void RedirectionCommand::execute()
 {
@@ -839,12 +831,14 @@ void RedirectionCommand::execute()
         {
             fd = open(lines[1], ios:: app | ios::out);
         }
-        else  if(!(append))
+        else
         {
             fd = open(lines[1],ios::trunc | ios::out);
         }
         dup2(fd,1);
-        SmallShell::getInstance().CreateCommand(lines[0]);
+        SmallShell::getInstance().executeCommand(lines[0]);
+        close(fd);
+        exit();
     }
     if(child > 0)
     {
