@@ -65,7 +65,7 @@ public:
 };
 
 class RedirectionCommand : public Command {
- // TODO: Add your data members
+    std::fstream my_file;
 public:
     explicit RedirectionCommand(const char* cmd_line): Command(cmd_line){}
     ~RedirectionCommand() override = default;
