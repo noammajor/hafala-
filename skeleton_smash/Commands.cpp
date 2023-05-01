@@ -102,6 +102,25 @@ int numOfWords(const char* getNum, string* argsTable)
     }
     return count;
 }
+
+char** splitByArg(char* line, char* arg)
+{
+    char* result[2];
+    string lineString = line;
+    for (int i = 0 ; i < lineString.find(arg) ; i++)
+    {
+        result[0] += lineString[i];
+    }
+    result[0] += 0;
+    int j = (int)lineString.find(arg) + 1;
+    if (arg[1] != 0)
+        j++;
+    for ( ; lineString[j] != 0 ; j++)
+        result[1] += lineString[j];
+    result[1] += 0;
+    return result;
+}
+
 ///////////////////////////////////////////////////////   Commands   ///////////////////////////////////////////////////////////
 
 void Command::printComd() const
@@ -429,10 +448,8 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
-  // TODO: Add your implementation here
-  // for example:
-  // Command* cmd = CreateCommand(cmd_line);
-  // cmd->execute();
+    Command* cmd = CreateCommand(cmd_line);
+    cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
 
