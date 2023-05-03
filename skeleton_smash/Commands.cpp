@@ -589,29 +589,28 @@ void ChangeDirCommand::execute()
     {
         perror("smash error: cd: too many arguments");
     }
-    if(*cmdLine == '-')//not correct
+    if(args[1] == '-')//not correct
     {
         if(SmallShell::getInstance().listSize() > 0)
         {
             if(chdir(SmallShell::getInstance().returnPrevious().c_str())==-1)
                 {
-                //error look at later
+                    perror("smash error: chdir failed")
                 }
             SmallShell::getInstance().removeCD();
         }
         else
             perror("smash error: cd: OLDPWD not set");
     }
-    else /////////////////////////////////////////////////////////////////
+    else
     {
         char cwd[1024];
         getcwd(cwd, 1024);
         SmallShell::getInstance().addCD( cwd);
-        if(chdir(SmallShell::getInstance().returnPrevious().c_str())==-1)
+        if(chdir(args[1])==-1)
             {
-                //error look at later
+                perror("smash error: chdir failed");
             }
-
     }
 }
 
@@ -778,13 +777,19 @@ void ComplexCommand::execute()
 
 void PipeCommand::execute()
 {
+    string cmd_s = _trim(string(cmd_line));
     std::string argTable[21];
     numOfWords(cmdLine,argTable);
-    SmallShell::getInstance().CreateCommand(argTable[0].c_str());
+    Command* commandNum1= nullptr;
+    Command* commandNum2= nullptr;
+    commandNum1 = SmallShell::getInstance().CreateCommand(argTable[0].c_str());
     int suc;
     int fd[2]={1,0};
-
-    if()/// if it gets "|" arguement
+    if(commandNum1 == nullptr)
+    {
+        return;
+    }
+    if(cmd_s.find("|") < cmd_s.length())/// if it gets "|" arguement
     {
         suc= pipe(fd);
     }
@@ -797,13 +802,10 @@ void PipeCommand::execute()
     {
         perror("pipe unsuccessful");
     }
-    pid_t child_pid;
-    int child_status;
-    child_pid = fork();
-    if(child_pid == 0)
+
+    commandNum2=SmallShell::getInstance().CreateCommand(argTable[2].c_str()); //need to see how we send arguments
+    if(!(commandNum2))
     {
-        setpgrp();
-        SmallShell::getInstance().CreateCommand(argTable[2].c_str()); //need to see how we send arguments
         close(fd[1]);
     }
     else
@@ -894,6 +896,80 @@ void ChmodCommand::execute()
     int permissions = std::stoi(argTable[1], nullptr, 8);
     int result = chmod(filename, permissions);
 }
+
+void QuitCommand::execute()
+{
+    std::string arg[22];
+    if(numOfWords(cmdLine,arg)==1 || arg[1]!="kill")
+    {
+        kill(getpid(); SIGKILL);
+    }
+    this->jobs->FGround->printJob();
+    for(int i=0; i < this->jobs->BGround->size(); i++){
+        this->jobs->BGround[i]->printJob();
+    }
+    for(int i=0; i < this->jobs->Stopped->size(); i++){
+        this->jobs->Stopped[i]->printJob();
+    }
+    for(int i=0; i < this->jobs->timeout->size(); i++){
+        this->jobs->timeout[i]->printJob();
+    }
+    kill(this->jobs->FGround->getPid(), SIGKILL);
+    for(int i=0; i < this->jobs->BGround->size(); i++){
+       kill( this->jobs->BGround[i]->getPid(), SIGKILL);
+    }
+    for(int i=0; i < this->jobs->Stopped->size(); i++){
+        kill( this->jobs->Stopped[i]->getPid(), SIGKILL);
+    }
+    kill(getpid(); SIGKILL);
+}
+
+void KillCommand::execute()
+{
+    std::string arg[22];
+    if(numOfWords(cmdLine,arg)!=3 || arg[1].length()>3 || arg[1].length()==1)
+    {
+        perror("smash error: kill: invalid arguments");
+    }
+    std::string num=arg[1].substr(1,arg[1].length()-1);
+    num
+    if(jobs->FGround->getJobId()==arg[2])
+    {
+        std::string toPrint= "signal number " + num +"was sent to pid " + jobs->FGround->getPid();
+        cout<<toPrint;
+        kill( jobs->FGround->getPid(), SIGKILL);
+        return;
+    }
+    for(int i=0; i < this->jobs->BGround->size(); i++)
+    {
+        if(jobs->BGround[i]->getJobId()==arg[2])
+        {
+            std::string toPrint = "signal number " + num + "was sent to pid " + this->jobs->BGround[i]->getPid();
+            cout << toPrint;
+            kill( this->jobs->BGround[i]->getPid(), SIGKILL);
+            return;
+        }
+    }
+    for(int i=0; i < this->jobs->Stopped->size(); i++)
+    {
+        if(jobs->Stopped[i]->getJobId()==arg[2])
+        {
+            std::string toPrint = "signal number " + num + "was sent to pid " + this->jobs->Stopped[i]->getPid();
+            cout << toPrint;
+            kill( this->jobs->Stopped[i]->getPid(), SIGKILL);
+            return;
+        }
+    }
+    std::string errorMessage = "smash error: kill: job-id "+ arg[2] +" does not exist";
+    perror(errorMessage);
+}
+
+
+
+
+
+
+
 /*
 void RedirectionCommand::execute()
 {
