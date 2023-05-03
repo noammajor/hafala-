@@ -956,9 +956,6 @@ void QuitCommand::execute()
     for(int i=0; i < this->jobs->Stopped->size(); i++){
         this->jobs->Stopped[i]->printJob();
     }
-    for(int i=0; i < this->jobs->timeout->size(); i++){
-        this->jobs->timeout[i]->printJob();
-    }
     kill(this->jobs->FGround->getPid(), SIGKILL);
     for(int i=0; i < this->jobs->BGround->size(); i++){
        kill( this->jobs->BGround[i]->getPid(), SIGKILL);
