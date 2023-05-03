@@ -49,6 +49,7 @@ bool redirection(char* cmd_line) {
         dup2(1, fd);
         return true;
         if (child > 0) {
+            int stat;
             if (wait(&stat) < 0)
                 perror("wait failed");
             else
@@ -128,7 +129,7 @@ int numOfWords(const char* getNum, string* argsTable)
         }
         else
             cur += &getNum[i];
-        argsTable[index] = "\0";
+        argsTable[index] = '\0';
     }
     return count;
 }
@@ -207,10 +208,12 @@ ExternalCommand::~ExternalCommand()
 }
 
 /////////////////////////////////////////////////  Jobs   ///////////////////////////////////////////////////////////
+
 void JobsList::add_timeout(Timeout_pid* time)
 {
     timeout.push_back(time);
 }
+
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
     if (isStopped)
@@ -726,7 +729,7 @@ void SimpleCommand::execute()
         if (argsTable[argsCnt-1] != "&")
             argsTable[argsCnt-1].pop_back();
         else
-            argsTable[argsCnt-1] = "\0";
+            argsTable[argsCnt-1] = '\0';
         SmallShell::getInstance().getJobs()->addJob(this);
     }
     if(child_pid < 0)
@@ -763,7 +766,7 @@ void ComplexCommand::execute()
         if (argsTable[argsCnt-1] != "&")
             argsTable[argsCnt-1].pop_back();
         else
-            argsTable[argsCnt-1] = "\0";
+            argsTable[argsCnt-1] = '\0';
         SmallShell::getInstance().getJobs()->addJob(this);
     }
     if(child_pid < 0)
@@ -911,90 +914,24 @@ void ChmodCommand::execute()
         perror("smash error: chmod failed"); //////////////////////////////////// error?
 }
 
-/*void RedirectionCommand::execute()
-{
-    string s = cmdLine;
-    const char** lines = splitByArg(cmdLine,'>');
-    bool append = false;
-    if(s.find(">>"))
-    {
-        append = true;
-        lines[1] = lines[1]+1;
-    }
-    pid_t child = fork();
-    if(child < 0)
-    {
-        perror("smash error: fork failed");
-    }
-    if(child == 0)
-    {
-        setpgrp();
-        int fd;
-        if(append)
-        {
-            fd = open(lines[1], ios:: app | ios::out);
-        }
-        else
-        {
-            fd = open(lines[1],ios::trunc | ios::out);
-        }
-        dup2(fd,1);
-        SmallShell::getInstance().executeCommand(lines[0]);
-        close(fd);
-        exit();
-    }
-    if(child > 0)
-    {
-        int stat;
-        if( wait(&stat) < 0 )
-            perror("wait failed");
-        else
-            chkStatus(child,stat);
-    }
-}
-
-void RedirectionCommand::execute()
-{
-    string fileName = cmdLine+1;
-
-}*/
-
-struct Timeout_pid
-explicit TimeoutCommand::TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line)
-{
-    std::string argTable[22];
-    numOfWords(cmdLine,argTable);
-    try {
-        int num = std::stoi(argTable[1]);
-    } catch (const std::invalid_argument& e) {
-        perror("invalid argument");
-    }
-    std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
-    std::chrono::seconds added(num);
-    future_time = now + added;
-    //new cmdline
-    pid_t child=fork();
-    if(child==0)
-    {
-        setpgrp();
-        commandTimeout= SmallShell::CreateCommand(cmdline);
-        Timeout_pid* time_for_vec= new Timeout_pid;
-        time_for_vec->timeout_pid=this->getpid();
-        if(dynamic_cast<ExternalCommand*>(commandTimeout)!= nullptr)
-        {
-            time_for_vec->job_pid=commandTimeout->getpid();
-        }
-        else
-        {
-            time_for_vec->job_pid=-1;
-        }
-
-    }
-
-
-
-}
 void TimeoutCommand::execute()
 {
-
-}
+    std::string argTable[22];
+    string line = cmdLine;
+    int i = 0;
+    for ( ; i < line.length() ; i++)
+    {
+        if (isdigit(line[i]))
+            break;
+    }
+    string number;
+    for ( ; i < line.length() && isdigit(line[i]) ; i++)
+        number += line[i];
+    number += '\0';
+    int alarmTime = stoi(number);
+    alarm(alarmTime);
+    Timeout_pid* timeout = new Timeout_pid;
+    timeout->timeout_pid = commandPid;
+    timeout->alarm_time = time(nullptr) + alarmTime;
+    SmallShell::getInstance().getJobs()->add_timeout(timeout);
+    }

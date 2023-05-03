@@ -124,12 +124,13 @@ public:
 ///////////////////////////////////////////////////  Jobs   ////////////////////////////////////////////////////////////////
 
 enum status {forground, background, stopped};
+
 struct Timeout_pid
 {
     pid_t timeout_pid;
-    pid_t job_pid;
-    auto future_time
+    time_t alarm_time;
 };
+
 class JobsList {
 public:
     class JobEntry{
@@ -155,7 +156,7 @@ public:
     JobEntry* FGround;
     std::vector<JobEntry*> BGround;
     std::vector<JobEntry*> Stopped;
-    std::vector<Timeout_pid> timeout;
+    std::vector<Timeout_pid*> timeout;
  // TODO: Add your data members
 
 public:
@@ -204,11 +205,11 @@ public:
 };
 
 class TimeoutCommand : public BuiltInCommand {
-    Command* commandTimeout;
- public:
-  explicit TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
-  virtual ~TimeoutCommand() {}
-  void execute() override;
+    pid_t commandPid;
+public:
+    TimeoutCommand(const char* cmd_line, pid_t pid): BuiltInCommand(cmd_line), commandPid(pid){}
+    virtual ~TimeoutCommand() {}
+    void execute() override;
 };
 
 ///////////////////////////////////////////////  SpecialCommands   ///////////////////////////////////////////////////////////
