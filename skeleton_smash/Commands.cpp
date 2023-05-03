@@ -26,21 +26,36 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 
 
 ///////////////////////////////////////////////  General Functions   ///////////////////////////////////////////////////////////
-
-bool redirection(char* cmd_line)
+std::string fileNameOpen(char* cmd_line)
 {
+    std::string fileName= cmd_line;
+    if(fileName.find("<<")<fileName.length())
+    {
+        return fileName.substr(fileName.find(">>")+2,fileName.length());
+    }
+    else
+    {
+        return fileName.substr(fileName.find(">")+1,fileName.length());
+    }
+}
+
+bool redirection(char* cmd_line) {
     bool append = doesneedtoappend(cmdLine);
+    std::string directFile= fileNameOpen(cmd_line);
     pid_t child = fork();
     if (child < 0) {
         perror("smash error: fork failed");
     }
-    if (child == 0) {
+    if (child == 0)
+    {
         setpgrp();
         int fd;
-        if (append) {
+        if (append)
+        {
             fd = open(directFile, ios::app | ios::out);
         }
-        if (!(append)) {
+        if (!(append))
+        {
             fd = open(directFile, ios::trunc | ios::out);
         }
         if (!(my_file)) {
@@ -48,14 +63,14 @@ bool redirection(char* cmd_line)
         }
         dup2(1, fd);
         return true;
-        if (child > 0) {
-            int stat;
-            if (wait(&stat) < 0)
-                perror("wait failed");
-            else
-                chkStatus(child, stat);
-            return false;
-        }
+    }
+    if (child > 0) {
+        int stat;
+        if (wait(&stat) < 0)
+            perror("wait failed");
+        else
+            chkStatus(child, stat);
+        return false;
     }
 }
 
@@ -373,7 +388,7 @@ void JobsList::JobEntry::printJob()
 {
     cout << "[" << Job_ID << "] " ; ////////////////continue
     command->printComd();
-    cout<<" : "<<getpid()<< getCurrentTime();
+    cout<<" : "<<getpid()<<" "<<getCurrentTime();
     if (currentStatus == stopped)
         cout << " (stopped)";
 }
@@ -593,6 +608,10 @@ std::vector<Timeout_obj*> SmallShell::getAlarmed()
 
 void SmallShell::executeCommand(const char *cmd_line) {
     Command* cmd = CreateCommand(cmd_line);
+    if(cmd== nullptr)
+    {
+        return;
+    }
     cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
@@ -629,7 +648,6 @@ void GetCurrDirCommand::execute()
 void ChangeDirCommand::execute()
 {
     string args[21];
-    ///must put the string in cut
     if(numOfWords(cmdLine, args) > 2)
     {
         perror("smash error: cd: too many arguments");
@@ -955,9 +973,6 @@ void QuitCommand::execute()
     }
     for(int i=0; i < this->jobs->Stopped->size(); i++){
         this->jobs->Stopped[i]->printJob();
-    }
-    for(int i=0; i < this->jobs->timeout->size(); i++){
-        this->jobs->timeout[i]->printJob();
     }
     kill(this->jobs->FGround->getPid(), SIGKILL);
     for(int i=0; i < this->jobs->BGround->size(); i++){
