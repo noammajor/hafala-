@@ -28,19 +28,35 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 
 
 ///////////////////////////////////////////////  General Functions   ///////////////////////////////////////////////////////////
+std::string fileNameOpen(char* cmd_line)
+{
+    std::string fileName= cmd_line;
+    if(fileName.find("<<")<fileName.length())
+    {
+        return fileName.substr(fileName.find(">>")+2,fileName.length());
+    }
+    else
+    {
+        return fileName.substr(fileName.find(">")+1,fileName.length());
+    }
+}
 bool redirection(char* cmd_line) {
     bool append = doesneedtoappend(cmdLine);
+    std::string directFile= fileNameOpen(cmd_line);
     pid_t child = fork();
     if (child < 0) {
         perror("smash error: fork failed");
     }
-    if (child == 0) {
+    if (child == 0)
+    {
         setpgrp();
         int fd;
-        if (append) {
+        if (append)
+        {
             fd = open(directFile, ios::app | ios::out);
         }
-        if (!(append)) {
+        if (!(append))
+        {
             fd = open(directFile, ios::trunc | ios::out);
         }
         if (!(my_file)) {
@@ -48,14 +64,14 @@ bool redirection(char* cmd_line) {
         }
         dup2(1, fd);
         return true;
-        if (child > 0) {
-            int stat;
-            if (wait(&stat) < 0)
-                perror("wait failed");
-            else
-                chkStatus(child, stat);
-            return false;
-        }
+    }
+    if (child > 0) {
+        int stat;
+        if (wait(&stat) < 0)
+            perror("wait failed");
+        else
+            chkStatus(child, stat);
+        return false;
     }
 }
 
