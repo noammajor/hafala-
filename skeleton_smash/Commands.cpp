@@ -49,6 +49,7 @@ bool redirection(char* cmd_line) {
         dup2(1, fd);
         return true;
         if (child > 0) {
+            int stat;
             if (wait(&stat) < 0)
                 perror("wait failed");
             else
@@ -128,7 +129,7 @@ int numOfWords(const char* getNum, string* argsTable)
         }
         else
             cur += &getNum[i];
-        argsTable[index] = "\0";
+        argsTable[index] = '\0';
     }
     return count;
 }
@@ -209,10 +210,8 @@ ExternalCommand::~ExternalCommand()
 }
 
 /////////////////////////////////////////////////  Jobs   ///////////////////////////////////////////////////////////
-void JobsList::add_timeout(Timeout_pid* time)
-{
-    timeout.push_back(time);
-}
+
+
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
     if (isStopped)
@@ -238,6 +237,7 @@ void JobsList::printJobsList()
             else
                 bgJob->printJob();
         }
+        cout << "\n";
     }
 }
 
@@ -546,6 +546,48 @@ Command* SmallShell::BuiltIn(std::string name) const
     }
 }
 
+void SmallShell::add_timeout(Timeout_obj* time)
+{
+    timeout.push_back(time);
+}
+
+std::vector<Timeout_obj*> SmallShell::getAlarmed()
+{
+    return timeout;
+}
+
+/*bool SmallShell::isBuiltIn(std::string name) const
+{
+    if (firstWord.compare("chprompt") == 0) {
+        return true; ///////////////////////////
+    }
+    else if (firstWord.compare("showpid") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("pwd") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("cd") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("jobs") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("fg") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("bg") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("quit") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("kill") == 0) {
+        return true;
+    }
+    return false;
+}*/
+
 void SmallShell::executeCommand(const char *cmd_line) {
     Command* cmd = CreateCommand(cmd_line);
     if(cmd== nullptr)
@@ -743,7 +785,7 @@ void SimpleCommand::execute()
         if (argsTable[argsCnt-1] != "&")
             argsTable[argsCnt-1].pop_back();
         else
-            argsTable[argsCnt-1] = "\0";
+            argsTable[argsCnt-1] = '\0';
         SmallShell::getInstance().getJobs()->addJob(this);
     }
         pid_t pid = getpid();
@@ -764,7 +806,7 @@ void ComplexCommand::execute()
         if (argsTable[argsCnt-1] != "&")
             argsTable[argsCnt-1].pop_back();
         else
-            argsTable[argsCnt-1] = "\0";
+            argsTable[argsCnt-1] = '\0';
         SmallShell::getInstance().getJobs()->addJob(this);
     }
         pid_t pid = getpid();
@@ -1052,5 +1094,23 @@ explicit TimeoutCommand::TimeoutCommand(const char* cmd_line): BuiltInCommand(cm
 }
 void TimeoutCommand::execute()
 {
-
+    std::string argTable[22];
+    string line = cmdLine;
+    int i = 0;
+    for ( ; i < line.length() ; i++)
+    {
+        if (isdigit(line[i]))
+            break;
+    }
+    string number;
+    for ( ; i < line.length() && isdigit(line[i]) ; i++)
+        number += line[i];
+    number += '\0';
+    int alarmTime = stoi(number);
+    alarm(alarmTime);
+    Timeout_obj* timeout = new Timeout_obj;
+    timeout->timeout_pid = commandPid;
+    timeout->alarm_time = time(nullptr) + alarmTime;
+    timeout->cmd_line = cmdLine;
+    SmallShell::getInstance().add_timeout(timeout);
 }
