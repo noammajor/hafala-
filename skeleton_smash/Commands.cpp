@@ -209,10 +209,6 @@ ExternalCommand::~ExternalCommand()
 
 /////////////////////////////////////////////////  Jobs   ///////////////////////////////////////////////////////////
 
-void JobsList::add_timeout(Timeout_pid* time)
-{
-    timeout.push_back(time);
-}
 
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
@@ -239,6 +235,7 @@ void JobsList::printJobsList()
             else
                 bgJob->printJob();
         }
+        cout << "\n";
     }
 }
 
@@ -499,6 +496,17 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     return new SimpleCommand(cmd_line);
     }
 }
+
+void SmallShell::add_timeout(Timeout_obj* time)
+{
+    timeout.push_back(time);
+}
+
+std::vector<Timeout_obj*> SmallShell::getAlarmed()
+{
+    return timeout;
+}
+
 /*bool SmallShell::isBuiltIn(std::string name) const
 {
     if (firstWord.compare("chprompt") == 0) {
@@ -645,6 +653,7 @@ void ForegroundCommand::execute()
         jobs->removeJobById(job->getJobId());
         jobs->moveToFG(job);
         job->printJob();
+        cout << "\n";
         waitpid(job->getJobId(), &status, 0);
     }
     else
@@ -684,6 +693,7 @@ void BackgroundCommand::execute()
             }
             jobs->moveToBG(job);
             job->printJob();
+            cout << "\n";
             kill(pid, SIGCONT);
         }
         catch (exception &e)
@@ -701,6 +711,7 @@ void BackgroundCommand::execute()
         }
         jobs->moveToBG(job);
         job->printJob();
+        cout << "\n";
         kill(job->getPid(), SIGCONT);
     }
     else
@@ -930,8 +941,9 @@ void TimeoutCommand::execute()
     number += '\0';
     int alarmTime = stoi(number);
     alarm(alarmTime);
-    Timeout_pid* timeout = new Timeout_pid;
+    Timeout_obj* timeout = new Timeout_obj;
     timeout->timeout_pid = commandPid;
     timeout->alarm_time = time(nullptr) + alarmTime;
-    SmallShell::getInstance().getJobs()->add_timeout(timeout);
-    }
+    timeout->cmd_line = cmdLine;
+    SmallShell::getInstance().add_timeout(timeout);
+}

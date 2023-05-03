@@ -125,12 +125,6 @@ public:
 
 enum status {forground, background, stopped};
 
-struct Timeout_pid
-{
-    pid_t timeout_pid;
-    time_t alarm_time;
-};
-
 class JobsList {
 public:
     class JobEntry{
@@ -156,7 +150,6 @@ public:
     JobEntry* FGround;
     std::vector<JobEntry*> BGround;
     std::vector<JobEntry*> Stopped;
-    std::vector<Timeout_pid*> timeout;
  // TODO: Add your data members
 
 public:
@@ -176,7 +169,6 @@ public:
     void addToFG(JobEntry* job);
     void addToStopped(JobEntry* job);
     JobEntry* getFGjob() const;
-    void add_timeout(Timeout_pid* time);
   // TODO: Add extra methods or modify existing ones as needed
 };
 
@@ -239,11 +231,21 @@ public:
 
 ///////////////////////////////////////////////  SmallShell   ///////////////////////////////////////////////////////////
 
+
+struct Timeout_obj
+{
+    pid_t timeout_pid;
+    time_t alarm_time;
+    const char* cmd_line;
+};
+
+
 class SmallShell {
 private:
     std::string namePrompt;
     std::list<std::string> pastCd;
     JobsList* jobsList;
+    std::vector<Timeout_obj*> timeout;
     static SmallShell* instance; // Guaranteed to be destroyed.
 
     SmallShell(): namePrompt("smash"){}
@@ -269,6 +271,8 @@ public:
     std::string returnPrevious() const;
     JobsList* getJobs();
     bool isBuiltIn(std::string name) const;
+    std::vector<Timeout_obj*> getAlarmed();
+    void add_timeout(Timeout_obj* time);
 };
 
 #endif //SMASH_COMMAND_H_

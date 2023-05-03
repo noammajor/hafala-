@@ -36,6 +36,17 @@ void ctrlCHandler(int sig_num) {
 }
 
 void alarmHandler(int sig_num) {
-  // TODO: Add your implementation
+    cout << "smash: got an alarm" << endl;
+    std::vector<Timeout_obj*> timedOut = SmallShell::getInstance().getAlarmed();
+    time_t curTime = time(nullptr);
+    for (Timeout_obj* obj : timedOut)
+    {
+        if (obj->timeout_pid < curTime)
+        {
+            cout << obj->cmd_line << " timed out!" << endl;
+            if (obj->timeout_pid)
+                kill(obj->timeout_pid, SIGKILL);
+        }
+    }
 }
 
