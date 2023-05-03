@@ -8,6 +8,7 @@
 #include "Commands.h"
 #include <cstring>
 #include <filesystem>
+#include <chrono>
 
 
 using namespace std;
@@ -27,6 +28,35 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 
 
 ///////////////////////////////////////////////  General Functions   ///////////////////////////////////////////////////////////
+bool redirection(char* cmd_line) {
+    bool append = doesneedtoappend(cmdLine);
+    pid_t child = fork();
+    if (child < 0) {
+        perror("smash error: fork failed");
+    }
+    if (child == 0) {
+        setpgrp();
+        int fd;
+        if (append) {
+            fd = open(directFile, ios::app | ios::out);
+        }
+        if (!(append)) {
+            fd = open(directFile, ios::trunc | ios::out);
+        }
+        if (!(my_file)) {
+            perror("Cannot open file"); ///not defined in the project
+        }
+        dup2(1, fd);
+        return true;
+        if (child > 0) {
+            if (wait(&stat) < 0)
+                perror("wait failed");
+            else
+                chkStatus(child, stat);
+            return false;
+        }
+    }
+}
 
 string _ltrim(const std::string& s)
 {
@@ -127,7 +157,10 @@ ExternalCommand::~ExternalCommand()
 }
 
 /////////////////////////////////////////////////  Jobs   ///////////////////////////////////////////////////////////
-
+void JobsList::add_timeout(Timeout_pid* time)
+{
+    timeout.push_back(time);
+}
 void JobsList::addJob(Command* cmd, bool isStopped)
 {
     if (isStopped)
@@ -361,7 +394,12 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 	// For example:
     string cmd_s = _trim(string(cmd_line));
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+    if(cmd_s.find("|") < cmd_s.length() || cmd_s.find(">>") < cmd_s.length())
+    {
+       bool redirectionSucsseded=redirection(char* cmd_line);
 
+
+    }
     if (cmd_s.find("|") < cmd_s.length()) {
         return new PipeCommand(cmd_line);
     }
@@ -407,6 +445,37 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     {
     return new SimpleCommand(cmd_line);
     }
+}
+bool SmallShell::isBuiltIn(std::string name) const
+{
+    if (firstWord.compare("chprompt") == 0) {
+        return true; ///////////////////////////
+    }
+    else if (firstWord.compare("showpid") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("pwd") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("cd") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("jobs") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("fg") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("bg") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("quit") == 0) {
+        return true;
+    }
+    else if (firstWord.compare("kill") == 0) {
+        return true;
+    }
+    return false;
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
@@ -655,6 +724,7 @@ void ComplexCommand::execute()
     }
     if(child_pid == 0)
     {
+        setpgrp();
         pid_t pid = getpid();
         cmdPid = pid;
         JobsList::JobEntry* job = new JobsList::JobEntry(forground, pid, this);
@@ -670,7 +740,6 @@ void ComplexCommand::execute()
         int status;
         waitpid(child_pid, &status, 0);
     }
-
 }
 
 void PipeCommand::execute()
@@ -791,16 +860,7 @@ void ChmodCommand::execute()
     int permissions = std::stoi(argTable[1], nullptr, 8);
     int result = chmod(filename, permissions);
 }
-
-class RedirectionCommand : public Command {
-    std::fstream my_file;
-public:
-    explicit RedirectionCommand(const char* cmd_line): Command(cmd_line){}
-    ~RedirectionCommand() override = default;
-    void execute() override;
-    //void prepare() override;
-    //void cleanup() override;
-};
+/*
 void RedirectionCommand::execute()
 {
     bool append = doesneedtoappend(cmdLine);
@@ -811,6 +871,7 @@ void RedirectionCommand::execute()
     }
     if(child==0)
     {
+        setpgrp();
         int fd;
         if(append)
         {
@@ -836,4 +897,86 @@ void RedirectionCommand::execute()
         else
         chkStatus(child,stat);
     }
+}
+ */
+bool redirection(char* cmd_line)
+{
+    bool append = doesneedtoappend(cmdLine);
+    pid_t child=fork();
+    if(child<0)
+    {
+        perror("smash error: fork failed");
+    }
+    if(child==0)
+    {
+        setpgrp();
+        int fd;
+        if(append)
+        {
+            fd=open(directFile, ios:: app | ios::out);
+        }
+        if(!(append))
+        {
+            fd=open(directFile,ios::trunc | ios::out);
+        }
+        if(!(my_file))
+        {
+            perror("Cannot open file"); ///not defined in the project
+        }
+        dup2(1,fd);
+        return true;
+        if(child>0)
+        {
+            if( wait(&stat) < 0 )
+                perror("wait failed");
+            else
+                chkStatus(child,stat);
+            return false;
+        }
+}
+class TimeoutCommand : public BuiltInCommand {
+bool done;
+public:
+    explicit TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
+    virtual ~TimeoutCommand() {}
+    void execute() override;
+};
+struct Timeout_pid
+explicit TimeoutCommand::TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line)
+{
+    std::string argTable[22];
+    numOfWords(cmdLine,argTable);
+    try {
+        int num = std::stoi(argTable[1]);
+    } catch (const std::invalid_argument& e) {
+        perror("invalid argument");
+    }
+    std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+    std::chrono::seconds added(num);
+    future_time = now + added;
+    //new cmdline
+    pid_t child=fork();
+    if(child==0)
+    {
+        setpgrp();
+        commandTimeout= SmallShell::CreateCommand(cmdline);
+        Timeout_pid* time_for_vec= new Timeout_pid;
+        time_for_vec->timeout_pid=this->getpid();
+        if(dynamic_cast<ExternalCommand*>(commandTimeout)!= nullptr)
+        {
+            time_for_vec->job_pid=commandTimeout->getpid();
+        }
+        else
+        {
+            time_for_vec->job_pid=-1;
+        }
+
+    }
+
+
+
+}
+void TimeoutCommand::execute()
+{
+
 }

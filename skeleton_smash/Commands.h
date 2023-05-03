@@ -4,7 +4,6 @@
 #include <vector>
 #include <time.h>
 #include <fstream>
-
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 
@@ -25,11 +24,11 @@ class BuiltInCommand : public Command{
 public:
     BuiltInCommand(const char* cmd_line): Command(cmd_line){}
     virtual ~BuiltInCommand() {}
+    virtual void execute() override{};
 };
 
 class ExternalCommand : public Command {
 protected:
-    std::fstream my_file;
     bool fdUsed;
     pid_t cmdPid;
 public:
@@ -121,10 +120,17 @@ public:
     void execute() override;
 };
 
+
+
 ///////////////////////////////////////////////////  Jobs   ////////////////////////////////////////////////////////////////
 
 enum status {forground, background, stopped};
-
+struct Timeout_pid
+{
+    pid_t timeout_pid;
+    pid_t job_pid;
+    auto future_time
+};
 class JobsList {
 public:
     class JobEntry{
@@ -150,6 +156,7 @@ public:
     JobEntry* FGround;
     std::vector<JobEntry*> BGround;
     std::vector<JobEntry*> Stopped;
+    std::vector<Timeout_pid> timeout;
  // TODO: Add your data members
 
 public:
@@ -169,6 +176,7 @@ public:
     void addToFG(JobEntry* job);
     void addToStopped(JobEntry* job);
     JobEntry* getFGjob() const;
+    void add_timeout(Timeout_pid* time);
   // TODO: Add extra methods or modify existing ones as needed
 };
 
@@ -197,8 +205,7 @@ public:
 };
 
 class TimeoutCommand : public BuiltInCommand {
-/* Bonus */
-// TODO: Add your data members
+    Command* commandTimeout;
  public:
   explicit TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
   virtual ~TimeoutCommand() {}
@@ -261,7 +268,7 @@ public:
     void changeName(const char* newName);
     std::string returnPrevious() const;
     JobsList* getJobs();
-  // TODO: add extra methods as needed
+    bool isBuiltIn(std::string name) const;
 };
 
 #endif //SMASH_COMMAND_H_
