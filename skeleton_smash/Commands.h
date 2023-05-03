@@ -104,17 +104,17 @@ public:
 
 class JobsList;
 class QuitCommand : public BuiltInCommand {
-// TODO: Add your data members
+    JobsList* jobs;
 public:
-    QuitCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line){}
-    virtual ~QuitCommand() {}
+    QuitCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line),jobs(jobs){};
+    virtual ~QuitCommand() {};
     void execute() override;
 };
 
 class KillCommand : public BuiltInCommand {
-    // TODO: Add your data members
+    JobsList* jobs;
 public:
-    KillCommand(const char* cmd_line, JobsList* jobs);
+    KillCommand(const char* cmd_line, JobsList* jobs):BuiltInCommand(cmd_line),jobs(jobs){};
     virtual ~KillCommand() = default;
     void execute() override;
 };
@@ -273,6 +273,8 @@ public:
     bool isBuiltIn(std::string name) const;
     std::vector<Timeout_obj*> getAlarmed();
     void add_timeout(Timeout_obj* time);
+    Command* BuiltIn(std::string name) const;
+    bool forkExtrenal();
 };
 
 #endif //SMASH_COMMAND_H_

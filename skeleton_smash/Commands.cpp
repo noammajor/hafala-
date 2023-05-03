@@ -151,6 +151,8 @@ const char** splitByArg(const char* line, char arg)
     }
     result[0] += 0;
     int j = (int)lineString.find(arg) + 1;
+    if (arg[1] != 0)
+        j++;
     for ( ; lineString[j] != 0 ; j++)
         result[1] += lineString[j];
     result[1] += 0;
@@ -443,27 +445,74 @@ JobsList* SmallShell::getJobs()
 Command * SmallShell::CreateCommand(const char* cmd_line) {
 	// For example:
     string cmd_s = _trim(string(cmd_line));
+    bool redirectionchild=false;
+    bool redirectionHappened=false;
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-    if(cmd_s.find("|") < cmd_s.length() || cmd_s.find(">>") < cmd_s.length())
+    if((cmd_s.find(">") < cmd_s.length()) || cmd_s.find(">>") < cmd_s.length())
     {
-       bool redirectionSucsseded=redirection(char* cmd_line);
-
-
+        redirectionHappened=true;
+        redirectionchild=redirection(char* cmd_line);
+       Command* cmd = this->BuiltIn(std::string name);
+       if(cmd)
+       {
+           return cmd;
+       }
     }
     if (cmd_s.find("|") < cmd_s.length()) {
         return new PipeCommand(cmd_line);
     }
-    if (cmd_s.find(">>") < cmd_s.length()) {
-        return new PipeCommand(cmd_line); //////////////////////////////pipe command?
+    if(redirectionHappened == true && redirectionchild == true)
+    {
+        if (cmd_s.find("*") < cmd_s.length() || cmd_s.find("?") < cmd_s.length()) {
+            return new ComplexCommand(cmd_line);
+        }
+        else
+        {
+            return new SimpleCommand(cmd_line);
+        }
     }
-    if (cmd_s.find(">") < cmd_s.length()) {
-        return new PipeCommand(cmd_line);
+    if(redirectionHappened == false)
+    {
+        if(forkExtrenal() == true)
+        {
+            if (cmd_s.find("*") < cmd_s.length() || cmd_s.find("?") < cmd_s.length()) {
+                return new ComplexCommand(cmd_line);
+            }
+            else
+            {
+                return new SimpleCommand(cmd_line);
+            }
+        }
+        else
+        {
+            return nullptr;
+        }
     }
 
-    if (cmd_s.find("*") < cmd_s.length() || cmd_s.find("?") < cmd_s.length()) {
-        return new ComplexCommand(cmd_line);
+}
+bool SmallShell::forkExtrenal()
+{
+    pid_t child_pid;
+    int child_status;
+    child_pid = fork();
+    if(child_pid < 0)
+    {
+        perror("smash error: fork failed");
     }
-
+    if(child_pid==0)
+    {
+        setpgrp();
+        return true;
+    }
+    if(child_pid>0)
+    {
+        int status;
+        waitpid(child_pid, &status, 0);
+        return false;
+    }
+}
+Command* SmallShell::BuiltIn(std::string name) const
+{
     if (firstWord.compare("chprompt") == 0) {
         return new ChmodCommand(cmd_line); ///////////////////////////
     }
@@ -493,7 +542,7 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     }
     else
     {
-    return new SimpleCommand(cmd_line);
+        return nullptr;
     }
 }
 
@@ -582,29 +631,28 @@ void ChangeDirCommand::execute()
     {
         perror("smash error: cd: too many arguments");
     }
-    if(*cmdLine == '-')//not correct
+    if(args[1] == '-')//not correct
     {
         if(SmallShell::getInstance().listSize() > 0)
         {
             if(chdir(SmallShell::getInstance().returnPrevious().c_str())==-1)
                 {
-                //error look at later
+                    perror("smash error: chdir failed")
                 }
             SmallShell::getInstance().removeCD();
         }
         else
             perror("smash error: cd: OLDPWD not set");
     }
-    else /////////////////////////////////////////////////////////////////
+    else
     {
         char cwd[1024];
         getcwd(cwd, 1024);
         SmallShell::getInstance().addCD( cwd);
-        if(chdir(SmallShell::getInstance().returnPrevious().c_str())==-1)
+        if(chdir(args[1])==-1)
             {
-                //error look at later
+                perror("smash error: chdir failed");
             }
-
     }
 }
 
@@ -653,7 +701,6 @@ void ForegroundCommand::execute()
         jobs->removeJobById(job->getJobId());
         jobs->moveToFG(job);
         job->printJob();
-        cout << "\n";
         waitpid(job->getJobId(), &status, 0);
     }
     else
@@ -693,7 +740,6 @@ void BackgroundCommand::execute()
             }
             jobs->moveToBG(job);
             job->printJob();
-            cout << "\n";
             kill(pid, SIGCONT);
         }
         catch (exception &e)
@@ -711,7 +757,6 @@ void BackgroundCommand::execute()
         }
         jobs->moveToBG(job);
         job->printJob();
-        cout << "\n";
         kill(job->getPid(), SIGCONT);
     }
     else
@@ -731,9 +776,6 @@ void SimpleCommand::execute()
 {
     std::string argsTable[22];
     int argsCnt = numOfWords(cmdLine,argsTable);
-    pid_t child_pid;
-    int child_status;
-    child_pid = fork();
     bool exists = _isBackgroundComamnd(cmdLine);
     if (exists)
     {
@@ -743,24 +785,11 @@ void SimpleCommand::execute()
             argsTable[argsCnt-1] = '\0';
         SmallShell::getInstance().getJobs()->addJob(this);
     }
-    if(child_pid < 0)
-    {
-        perror("smash error: fork failed");
-    }
-    else if(child_pid == 0)
-    {
         pid_t pid = getpid();
         cmdPid = pid;
-        setpgrp();
         execv(argsTable[0].c_str(),argsTable->c_str());
         perror("smash error: execv failed");
         exit();
-    }
-    else if(!(exists))
-    {
-        int status;
-        waitpid(child_pid, &status, 0);
-    }
 }
 
 void ComplexCommand::execute()
@@ -768,9 +797,6 @@ void ComplexCommand::execute()
     std::string argsTable[22];
     int argsCnt = numOfWords(cmdLine,argsTable);
     argsTable[0]="/bin/bash";
-    pid_t child_pid;
-    int child_status;
-    child_pid = fork();
     bool exists = _isBackgroundComamnd(cmdLine);
     if (exists)
     {
@@ -780,13 +806,6 @@ void ComplexCommand::execute()
             argsTable[argsCnt-1] = '\0';
         SmallShell::getInstance().getJobs()->addJob(this);
     }
-    if(child_pid < 0)
-    {
-        perror("smash error: fork failed");
-    }
-    if(child_pid == 0)
-    {
-        setpgrp();
         pid_t pid = getpid();
         cmdPid = pid;
         JobsList::JobEntry* job = new JobsList::JobEntry(forground, pid, this);
@@ -796,23 +815,23 @@ void ComplexCommand::execute()
         execv(argsTable[0].c_str(),argsTable->c_str());
         perror("smash error: execv failed");
         exit();
-    }
-    else if(!(exists))
-    {
-        int status;
-        waitpid(child_pid, &status, 0);
-    }
 }
 
 void PipeCommand::execute()
 {
+    string cmd_s = _trim(string(cmd_line));
     std::string argTable[21];
     numOfWords(cmdLine,argTable);
-    SmallShell::getInstance().CreateCommand(argTable[0].c_str());
+    Command* commandNum1= nullptr;
+    Command* commandNum2= nullptr;
+    commandNum1 = SmallShell::getInstance().CreateCommand(argTable[0].c_str());
     int suc;
     int fd[2]={1,0};
-
-    if()/// if it gets "|" arguement
+    if(commandNum1 == nullptr)
+    {
+        return;
+    }
+    if(cmd_s.find("|") < cmd_s.length())/// if it gets "|" arguement
     {
         suc= pipe(fd);
     }
@@ -825,13 +844,10 @@ void PipeCommand::execute()
     {
         perror("pipe unsuccessful");
     }
-    pid_t child_pid;
-    int child_status;
-    child_pid = fork();
-    if(child_pid == 0)
+
+    commandNum2=SmallShell::getInstance().CreateCommand(argTable[2].c_str()); //need to see how we send arguments
+    if(!(commandNum2))
     {
-        setpgrp();
-        SmallShell::getInstance().CreateCommand(argTable[2].c_str()); //need to see how we send arguments
         close(fd[1]);
     }
     else
@@ -916,15 +932,163 @@ void ChmodCommand::execute()
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>3)
     {
-        perror("smash error: gettype: invalid arguments");
+        perror("smash error: gettype: invalid aruments");
     }
-    const char* filename = argTable[2].c_str();
+    const char* filename =  c_str(argTable[2]);
     int permissions = std::stoi(argTable[1], nullptr, 8);
     int result = chmod(filename, permissions);
-    if (result == -1)
-        perror("smash error: chmod failed"); //////////////////////////////////// error?
 }
 
+void QuitCommand::execute()
+{
+    std::string arg[22];
+    if(numOfWords(cmdLine,arg)==1 || arg[1]!="kill")
+    {
+        kill(getpid(); SIGKILL);
+    }
+    this->jobs->FGround->printJob();
+    for(int i=0; i < this->jobs->BGround->size(); i++){
+        this->jobs->BGround[i]->printJob();
+    }
+    for(int i=0; i < this->jobs->Stopped->size(); i++){
+        this->jobs->Stopped[i]->printJob();
+    }
+    for(int i=0; i < this->jobs->timeout->size(); i++){
+        this->jobs->timeout[i]->printJob();
+    }
+    kill(this->jobs->FGround->getPid(), SIGKILL);
+    for(int i=0; i < this->jobs->BGround->size(); i++){
+       kill( this->jobs->BGround[i]->getPid(), SIGKILL);
+    }
+    for(int i=0; i < this->jobs->Stopped->size(); i++){
+        kill( this->jobs->Stopped[i]->getPid(), SIGKILL);
+    }
+    kill(getpid(); SIGKILL);
+}
+
+void KillCommand::execute()
+{
+    std::string arg[22];
+    if(numOfWords(cmdLine,arg)!=3 || arg[1].length()>3 || arg[1].length()==1)
+    {
+        perror("smash error: kill: invalid arguments");
+    }
+    std::string num=arg[1].substr(1,arg[1].length()-1);
+    num
+    if(jobs->FGround->getJobId()==arg[2])
+    {
+        std::string toPrint= "signal number " + num +"was sent to pid " + jobs->FGround->getPid();
+        cout<<toPrint;
+        kill( jobs->FGround->getPid(), SIGKILL);
+        return;
+    }
+    for(int i=0; i < this->jobs->BGround->size(); i++)
+    {
+        if(jobs->BGround[i]->getJobId()==arg[2])
+        {
+            std::string toPrint = "signal number " + num + "was sent to pid " + this->jobs->BGround[i]->getPid();
+            cout << toPrint;
+            kill( this->jobs->BGround[i]->getPid(), SIGKILL);
+            return;
+        }
+    }
+    for(int i=0; i < this->jobs->Stopped->size(); i++)
+    {
+        if(jobs->Stopped[i]->getJobId()==arg[2])
+        {
+            std::string toPrint = "signal number " + num + "was sent to pid " + this->jobs->Stopped[i]->getPid();
+            cout << toPrint;
+            kill( this->jobs->Stopped[i]->getPid(), SIGKILL);
+            return;
+        }
+    }
+    std::string errorMessage = "smash error: kill: job-id "+ arg[2] +" does not exist";
+    perror(errorMessage);
+}
+
+
+
+
+
+
+
+/*
+void RedirectionCommand::execute()
+{
+    bool append = doesneedtoappend(cmdLine);
+    pid_t child=fork();
+    if(child<0)
+    {
+        perror("smash error: fork failed");
+    }
+    if(child == 0)
+    {
+        setpgrp();
+        int fd;
+        if(append)
+        {
+            fd = open(lines[1], ios:: app | ios::out);
+        }
+        else
+        {
+            fd = open(lines[1],ios::trunc | ios::out);
+        }
+        dup2(fd,1);
+        SmallShell::getInstance().executeCommand(lines[0]);
+        close(fd);
+        exit();
+    }
+    if(child > 0)
+    {
+        int stat;
+        if( wait(&stat) < 0 )
+            perror("wait failed");
+        else
+            chkStatus(child,stat);
+    }
+}
+class TimeoutCommand : public BuiltInCommand {
+bool done;
+public:
+    explicit TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
+    virtual ~TimeoutCommand() {}
+    void execute() override;
+};
+struct Timeout_pid
+explicit TimeoutCommand::TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line)
+{
+    std::string argTable[22];
+    numOfWords(cmdLine,argTable);
+    try {
+        int num = std::stoi(argTable[1]);
+    } catch (const std::invalid_argument& e) {
+        perror("invalid argument");
+    }
+    std::chrono::time_point<std::chrono::system_clock> now = std::chrono::system_clock::now();
+    std::chrono::seconds added(num);
+    future_time = now + added;
+    //new cmdline
+    pid_t child=fork();
+    if(child==0)
+    {
+        setpgrp();
+        commandTimeout= SmallShell::CreateCommand(cmdline);
+        Timeout_pid* time_for_vec= new Timeout_pid;
+        time_for_vec->timeout_pid=this->getpid();
+        if(dynamic_cast<ExternalCommand*>(commandTimeout)!= nullptr)
+        {
+            time_for_vec->job_pid=commandTimeout->getpid();
+        }
+        else
+        {
+            time_for_vec->job_pid=-1;
+        }
+
+    }
+
+
+
+}
 void TimeoutCommand::execute()
 {
     std::string argTable[22];
