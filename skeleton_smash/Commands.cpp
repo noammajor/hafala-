@@ -371,7 +371,7 @@ void JobsList::JobEntry::printJob()
 {
     cout << "[" << Job_ID << "] " ; ////////////////continue
     command->printComd();
-    cout<<" : "<<getpid()<< getCurrentTime();
+    cout<<" : "<<getpid()<<" "<<getCurrentTime();
     if (currentStatus == stopped)
         cout << " (stopped)";
 }
@@ -548,6 +548,10 @@ Command* SmallShell::BuiltIn(std::string name) const
 
 void SmallShell::executeCommand(const char *cmd_line) {
     Command* cmd = CreateCommand(cmd_line);
+    if(cmd== nullptr)
+    {
+        return;
+    }
     cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
@@ -584,7 +588,6 @@ void GetCurrDirCommand::execute()
 void ChangeDirCommand::execute()
 {
     string args[21];
-    ///must put the string in cut
     if(numOfWords(cmdLine, args) > 2)
     {
         perror("smash error: cd: too many arguments");
