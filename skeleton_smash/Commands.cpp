@@ -1,7 +1,5 @@
 #include <unistd.h>
-#include <string.h>
 #include <iostream>
-#include <vector>
 #include <sstream>
 #include <sys/wait.h>
 #include <iomanip>
@@ -28,7 +26,9 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 
 
 ///////////////////////////////////////////////  General Functions   ///////////////////////////////////////////////////////////
-bool redirection(char* cmd_line) {
+
+bool redirection(char* cmd_line)
+{
     bool append = doesneedtoappend(cmdLine);
     pid_t child = fork();
     if (child < 0) {
@@ -90,12 +90,14 @@ int _parseCommandLine(const char* cmd_line, char** args) {
     FUNC_EXIT()
 }
 
-bool _isBackgroundComamnd(const char* cmd_line) {
+bool _isBackgroundComamnd(const char* cmd_line)
+{
     const string str(cmd_line);
     return str[str.find_last_not_of(WHITESPACE)] == '&';
 }
 
-void _removeBackgroundSign(char* cmd_line) {
+void _removeBackgroundSign(char* cmd_line)
+{
     const string str(cmd_line);
     // find last character other than spaces
     unsigned int idx = str.find_last_not_of(WHITESPACE);
@@ -490,6 +492,7 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     }
 
 }
+
 bool SmallShell::forkExtrenal()
 {
     pid_t child_pid;
@@ -974,7 +977,6 @@ void KillCommand::execute()
         perror("smash error: kill: invalid arguments");
     }
     std::string num=arg[1].substr(1,arg[1].length()-1);
-    num
     if(jobs->FGround->getJobId()==arg[2])
     {
         std::string toPrint= "signal number " + num +"was sent to pid " + jobs->FGround->getPid();
@@ -996,7 +998,7 @@ void KillCommand::execute()
     {
         if(jobs->Stopped[i]->getJobId()==arg[2])
         {
-            std::string toPrint = "signal number " + num + "was sent to pid " + this->jobs->Stopped[i]->getPid();
+            std::string toPrint = "signal number " + num + "was sent to pid " + this->jobs->Stopped[i]->getPid().to_string();
             cout << toPrint;
             kill( this->jobs->Stopped[i]->getPid(), SIGKILL);
             return;
@@ -1012,8 +1014,8 @@ void KillCommand::execute()
 
 
 
-/*
-void RedirectionCommand::execute()
+
+/*void RedirectionCommand::execute()
 {
     bool append = doesneedtoappend(cmdLine);
     pid_t child=fork();
@@ -1110,4 +1112,4 @@ void TimeoutCommand::execute()
     timeout->alarm_time = time(nullptr) + alarmTime;
     timeout->cmd_line = cmdLine;
     SmallShell::getInstance().add_timeout(timeout);
-}
+}*/

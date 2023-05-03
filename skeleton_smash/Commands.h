@@ -32,7 +32,7 @@ protected:
     bool fdUsed;
     pid_t cmdPid;
 public:
-    ExternalCommand(const char* cmd_line): Command(cmd_line), fdUsed(false),my_file(NULL), cmdPid(-1){}
+    ExternalCommand(const char* cmd_line): Command(cmd_line), fdUsed(false), cmdPid(-1){}
     virtual ~ExternalCommand();
     void execute() override;
     void changeFd(const bool append,const std::string directFile);
