@@ -267,7 +267,8 @@ public:
     void changeName(const char* newName);
     std::string returnPrevious() const;
     JobsList* getJobs();
-    bool isBuiltIn(std::string name) const;
+    Command* BuiltIn(std::string name) const;
+    bool forkExtrenal();
 };
 
 #endif //SMASH_COMMAND_H_

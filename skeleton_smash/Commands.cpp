@@ -150,6 +150,8 @@ const char** splitByArg(const char* line, char arg)
     }
     result[0] += 0;
     int j = (int)lineString.find(arg) + 1;
+    if (arg[1] != 0)
+        j++;
     for ( ; lineString[j] != 0 ; j++)
         result[1] += lineString[j];
     result[1] += 0;
@@ -443,27 +445,74 @@ JobsList* SmallShell::getJobs()
 Command * SmallShell::CreateCommand(const char* cmd_line) {
 	// For example:
     string cmd_s = _trim(string(cmd_line));
+    bool redirectionchild=false;
+    bool redirectionHappened=false;
     string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-    if(cmd_s.find("|") < cmd_s.length() || cmd_s.find(">>") < cmd_s.length())
+    if((cmd_s.find(">") < cmd_s.length()) || cmd_s.find(">>") < cmd_s.length())
     {
-       bool redirectionSucsseded=redirection(char* cmd_line);
-
-
+        redirectionHappened=true;
+        redirectionchild=redirection(char* cmd_line);
+       Command* cmd = this->BuiltIn(std::string name);
+       if(cmd)
+       {
+           return cmd;
+       }
     }
     if (cmd_s.find("|") < cmd_s.length()) {
         return new PipeCommand(cmd_line);
     }
-    if (cmd_s.find(">>") < cmd_s.length()) {
-        return new PipeCommand(cmd_line); //////////////////////////////pipe command?
+    if(redirectionHappened == true && redirectionchild == true)
+    {
+        if (cmd_s.find("*") < cmd_s.length() || cmd_s.find("?") < cmd_s.length()) {
+            return new ComplexCommand(cmd_line);
+        }
+        else
+        {
+            return new SimpleCommand(cmd_line);
+        }
     }
-    if (cmd_s.find(">") < cmd_s.length()) {
-        return new PipeCommand(cmd_line);
+    if(redirectionHappened == false)
+    {
+        if(forkExtrenal() == true)
+        {
+            if (cmd_s.find("*") < cmd_s.length() || cmd_s.find("?") < cmd_s.length()) {
+                return new ComplexCommand(cmd_line);
+            }
+            else
+            {
+                return new SimpleCommand(cmd_line);
+            }
+        }
+        else
+        {
+            return nullptr;
+        }
     }
 
-    if (cmd_s.find("*") < cmd_s.length() || cmd_s.find("?") < cmd_s.length()) {
-        return new ComplexCommand(cmd_line);
+}
+bool SmallShell::forkExtrenal()
+{
+    pid_t child_pid;
+    int child_status;
+    child_pid = fork();
+    if(child_pid < 0)
+    {
+        perror("smash error: fork failed");
     }
-
+    if(child_pid==0)
+    {
+        setpgrp();
+        return true;
+    }
+    if(child_pid>0)
+    {
+        int status;
+        waitpid(child_pid, &status, 0);
+        return false;
+    }
+}
+Command* SmallShell::BuiltIn(std::string name) const
+{
     if (firstWord.compare("chprompt") == 0) {
         return new ChmodCommand(cmd_line); ///////////////////////////
     }
@@ -493,40 +542,9 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     }
     else
     {
-    return new SimpleCommand(cmd_line);
+        return nullptr;
     }
 }
-/*bool SmallShell::isBuiltIn(std::string name) const
-{
-    if (firstWord.compare("chprompt") == 0) {
-        return true; ///////////////////////////
-    }
-    else if (firstWord.compare("showpid") == 0) {
-        return true;
-    }
-    else if (firstWord.compare("pwd") == 0) {
-        return true;
-    }
-    else if (firstWord.compare("cd") == 0) {
-        return true;
-    }
-    else if (firstWord.compare("jobs") == 0) {
-        return true;
-    }
-    else if (firstWord.compare("fg") == 0) {
-        return true;
-    }
-    else if (firstWord.compare("bg") == 0) {
-        return true;
-    }
-    else if (firstWord.compare("quit") == 0) {
-        return true;
-    }
-    else if (firstWord.compare("kill") == 0) {
-        return true;
-    }
-    return false;
-}*/
 
 void SmallShell::executeCommand(const char *cmd_line) {
     Command* cmd = CreateCommand(cmd_line);
@@ -717,9 +735,6 @@ void SimpleCommand::execute()
 {
     std::string argsTable[22];
     int argsCnt = numOfWords(cmdLine,argsTable);
-    pid_t child_pid;
-    int child_status;
-    child_pid = fork();
     bool exists = _isBackgroundComamnd(cmdLine);
     if (exists)
     {
@@ -729,24 +744,11 @@ void SimpleCommand::execute()
             argsTable[argsCnt-1] = "\0";
         SmallShell::getInstance().getJobs()->addJob(this);
     }
-    if(child_pid < 0)
-    {
-        perror("smash error: fork failed");
-    }
-    else if(child_pid == 0)
-    {
         pid_t pid = getpid();
         cmdPid = pid;
-        setpgrp();
         execv(argsTable[0].c_str(),argsTable->c_str());
         perror("smash error: execv failed");
         exit();
-    }
-    else if(!(exists))
-    {
-        int status;
-        waitpid(child_pid, &status, 0);
-    }
 }
 
 void ComplexCommand::execute()
@@ -754,9 +756,6 @@ void ComplexCommand::execute()
     std::string argsTable[22];
     int argsCnt = numOfWords(cmdLine,argsTable);
     argsTable[0]="/bin/bash";
-    pid_t child_pid;
-    int child_status;
-    child_pid = fork();
     bool exists = _isBackgroundComamnd(cmdLine);
     if (exists)
     {
@@ -766,13 +765,6 @@ void ComplexCommand::execute()
             argsTable[argsCnt-1] = "\0";
         SmallShell::getInstance().getJobs()->addJob(this);
     }
-    if(child_pid < 0)
-    {
-        perror("smash error: fork failed");
-    }
-    if(child_pid == 0)
-    {
-        setpgrp();
         pid_t pid = getpid();
         cmdPid = pid;
         JobsList::JobEntry* job = new JobsList::JobEntry(forground, pid, this);
@@ -782,12 +774,6 @@ void ComplexCommand::execute()
         execv(argsTable[0].c_str(),argsTable->c_str());
         perror("smash error: execv failed");
         exit();
-    }
-    else if(!(exists))
-    {
-        int status;
-        waitpid(child_pid, &status, 0);
-    }
 }
 
 void PipeCommand::execute()
@@ -902,27 +888,18 @@ void ChmodCommand::execute()
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>3)
     {
-        perror("smash error: gettype: invalid arguments");
+        perror("smash error: gettype: invalid aruments");
     }
-    const char* filename = argTable[2].c_str();
+    const char* filename =  c_str(argTable[2]);
     int permissions = std::stoi(argTable[1], nullptr, 8);
     int result = chmod(filename, permissions);
-    if (result == -1)
-        perror("smash error: chmod failed"); //////////////////////////////////// error?
 }
-
-/*void RedirectionCommand::execute()
+/*
+void RedirectionCommand::execute()
 {
-    string s = cmdLine;
-    const char** lines = splitByArg(cmdLine,'>');
-    bool append = false;
-    if(s.find(">>"))
-    {
-        append = true;
-        lines[1] = lines[1]+1;
-    }
-    pid_t child = fork();
-    if(child < 0)
+    bool append = doesneedtoappend(cmdLine);
+    pid_t child=fork();
+    if(child<0)
     {
         perror("smash error: fork failed");
     }
@@ -952,13 +929,13 @@ void ChmodCommand::execute()
             chkStatus(child,stat);
     }
 }
-
-void RedirectionCommand::execute()
-{
-    string fileName = cmdLine+1;
-
-}*/
-
+class TimeoutCommand : public BuiltInCommand {
+bool done;
+public:
+    explicit TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
+    virtual ~TimeoutCommand() {}
+    void execute() override;
+};
 struct Timeout_pid
 explicit TimeoutCommand::TimeoutCommand(const char* cmd_line): BuiltInCommand(cmd_line)
 {
