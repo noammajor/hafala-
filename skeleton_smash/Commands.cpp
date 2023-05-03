@@ -126,6 +126,32 @@ const char** splitByArg(const char* line, char arg)
     return result;
 }
 
+string findCommand(const char* cmd_line)
+{
+    string line = cmd_line;
+    string command = "";
+    string timeout = "timeout";
+    int i = 0;
+    for (; i < line.length() && i < timeout.length() ; i++)
+    {
+        if (line[i] != timeout[i])
+            break;
+    }
+    if (i != timeout.length())
+        i = 0;
+    else
+    {
+        for (;  i < line.length() ; i++)
+        {
+            if (!strcmp(&line[i], " ") && !isdigit(line[i]))
+                break;
+        }
+    }
+    for ( ; i != line.length() && isalpha(line[i]) ; i++)
+        command += line[i];
+    return command;
+}
+
 ///////////////////////////////////////////////////////   Commands   ///////////////////////////////////////////////////////////
 
 void Command::printComd() const
@@ -816,7 +842,7 @@ void ChmodCommand::execute()
         perror("smash error: chmod failed"); //////////////////////////////////// error?
 }
 
-void RedirectionCommand::execute()
+/*void RedirectionCommand::execute()
 {
     string s = cmdLine;
     const char** lines = splitByArg(cmdLine,'>');
@@ -855,4 +881,10 @@ void RedirectionCommand::execute()
         else
             chkStatus(child,stat);
     }
+}*/
+
+void RedirectionCommand::execute()
+{
+    string fileName = cmdLine+1;
+
 }
