@@ -496,7 +496,7 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
     return new SimpleCommand(cmd_line);
     }
 }
-bool SmallShell::isBuiltIn(std::string name) const
+/*bool SmallShell::isBuiltIn(std::string name) const
 {
     if (firstWord.compare("chprompt") == 0) {
         return true; ///////////////////////////
@@ -526,7 +526,7 @@ bool SmallShell::isBuiltIn(std::string name) const
         return true;
     }
     return false;
-}
+}*/
 
 void SmallShell::executeCommand(const char *cmd_line) {
     Command* cmd = CreateCommand(cmd_line);
