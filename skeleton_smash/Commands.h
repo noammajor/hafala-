@@ -270,10 +270,9 @@ public:
     void changeName(const char* newName);
     std::string returnPrevious() const;
     JobsList* getJobs();
-    bool isBuiltIn(std::string name) const;
     std::vector<Timeout_obj*> getAlarmed();
     void add_timeout(Timeout_obj* time);
-    Command* BuiltIn(std::string name) const;
+    Command* BuiltIn(const char* cmd_line);
     bool forkExtrenal();
 };
 
