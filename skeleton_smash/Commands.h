@@ -16,7 +16,7 @@ public:
     virtual void execute() = 0;
     void printComd() const;
     //virtual void prepare();
-    //virtual void cleanup();
+    virtual void cleanup();
     // TODO: Add your extra methods if needed
 };
 
@@ -56,9 +56,9 @@ public:
 };
 
 class PipeCommand : public Command {
-  // TODO: Add your data members
+    Command* pipeCommand;
 public:
-    PipeCommand(const char* cmd_line): Command(cmd_line){}
+    PipeCommand(const char* cmd_line);
     ~PipeCommand() override = default;
     void execute() override;
 };
@@ -221,10 +221,8 @@ public:
 };
 
 class SetcoreCommand : public BuiltInCommand {
-    int jobId;
-    int core;
 public:
-    explicit SetcoreCommand(const char* cmd_line): BuiltInCommand(cmd_line),jobId(0),core(0){}
+    explicit SetcoreCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
     virtual ~SetcoreCommand() {}
     void execute() override;
 };
@@ -243,12 +241,13 @@ struct Timeout_obj
 class SmallShell {
 private:
     std::string namePrompt;
-    std::list<std::string> pastCd;
+    pid_t smashPid;
+    const char* curCD;
     JobsList* jobsList;
     std::vector<Timeout_obj*> timeout;
     static SmallShell* instance; // Guaranteed to be destroyed.
 
-    SmallShell(): namePrompt("smash"){}
+    SmallShell(): namePrompt("smash"), smashPid(getpid()), curCD(nullptr), jobsList(nullptr), timeout(){}
 public:
     Command *CreateCommand(const char* cmd_line);
     SmallShell(SmallShell const&)      = delete; // disable copy ctor
@@ -261,14 +260,14 @@ public:
         }// Instantiated on first use.
     return *instance;
     }
-    void addCD(std::string name);
-    void removeCD();
-    std::string get_name() const;
     ~SmallShell() = default;
-    int listSize() const;
+
+    pid_t getSmashPid() const;
+    void addCD(const char* dir);
+    const char* getCD();
+    std::string get_name() const;
     void executeCommand(const char* cmd_line);
     void changeName(const char* newName);
-    std::string returnPrevious() const;
     JobsList* getJobs();
     std::vector<Timeout_obj*> getAlarmed();
     void add_timeout(Timeout_obj* time);

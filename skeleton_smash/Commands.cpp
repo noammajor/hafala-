@@ -158,30 +158,21 @@ int numOfWords(const char* getNum, string* argsTable)
     return count;
 }
 
-/*const char** splitByArg(const char* line, char arg)
+void splitByArg(const char* line, char arg, char** result)
 {
-    const char* result[2];
     string lineString = line;
     for (int i = 0 ; i < lineString.find(arg) ; i++)
     {
         result[0] += lineString[i];
     }
-    if (_isBackgroundComamnd(line))
-    {
-        result[0] += '&';
-        string second = result[1];
-        second[second.length()-1] = 0;
-        result[1] = second.c_str();
-    }
     result[0] += 0;
     int j = (int)lineString.find(arg) + 1;
-    if (arg[1] != 0)
+    if (lineString[j] == '&')
         j++;
     for ( ; lineString[j] != 0 ; j++)
         result[1] += lineString[j];
     result[1] += 0;
-    return result;
-}*/
+}
 
 string findCommand(const char* cmd_line)
 {
@@ -214,6 +205,13 @@ string findCommand(const char* cmd_line)
 void Command::printComd() const
 {
     cout<< cmdLine;
+}
+
+void Command::cleanup()
+{
+    if (getpid() != SmallShell::getInstance().getSmashPid())
+        exit();
+
 }
 
 /////////////////////////////////////////////////  ExternalCommands   ///////////////////////////////////////////////////////////
@@ -409,11 +407,6 @@ void JobsList::JobEntry::FGjobID()
 
 /////////////////////////////////////////////////  SmallShell   ///////////////////////////////////////////////////////////
 
-int SmallShell::listSize() const
-{
-    return pastCd.size();
-}
-
 void SmallShell::changeName(const char* newName)
 {
     string args[21];
@@ -429,19 +422,19 @@ void SmallShell::changeName(const char* newName)
     }
 }
 
-std::string SmallShell::returnPrevious() const
+pid_t SmallShell::getSmashPid() const
 {
-    return this->pastCd.back();
+    return smashPid;
 }
 
-void SmallShell::addCD(std::string name)
+void SmallShell::addCD(const char* dir)
 {
-    pastCd.push_back(name);
+    curCD - dir;
 }
 
-void SmallShell::removeCD()
+const char* SmallShell::getCD()
 {
-    pastCd.pop_back();
+    return curCD;
 }
 
 std::string SmallShell::get_name() const
@@ -473,7 +466,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
     {
         redirectionHappened = true;
         isChild = redirection(char * cmd_line);
-        Command* cmd = this->BuiltIn(cmd_line);
+        Command* cmd = BuiltIn(cmd_line);
         if(cmd)
         {
             return cmd;
@@ -567,8 +560,9 @@ void SmallShell::executeCommand(const char *cmd_line) {
         return;
     }
     cmd->execute();
-  // Please note that you must fork smash process for some commands (e.g., external commands....)
+    cmd->cleanup();
 }
+
 
 /////////////////////////////////////////////////  Execute Commands   ///////////////////////////////////////////////////////////
 
@@ -588,14 +582,14 @@ void chmpromt::execute()
 
 void ShowPidCommand::execute()
 {
-    cout<<"smash pid is "<< getpid();
+    cout << "smash pid is "<< to_string(getpid());
 }
 
 void GetCurrDirCommand::execute()
 {
     char cwd[1024];
     getcwd(cwd,1024);
-    cout<<cwd;
+    cout << cwd << endl;
 }
 
 
@@ -605,30 +599,23 @@ void ChangeDirCommand::execute()
     if(numOfWords(cmdLine, args) > 2)
     {
         perror("smash error: cd: too many arguments");
+        return;
     }
-    if(args[1] == "-")
+    else if(args[1] == "-")
     {
-        if(SmallShell::getInstance().listSize() > 0)
+        if (!SmallShell::getInstance().getCD())
         {
-            if(chdir(SmallShell::getInstance().returnPrevious().c_str())==-1)
-                {
-                    perror("smash error: chdir failed");
-                }
-            SmallShell::getInstance().removeCD();
-        }
-        else
             perror("smash error: cd: OLDPWD not set");
+            return;
+        }
+        else if (chdir(SmallShell::getInstance().getCD()) != 0)
+        {
+            perror("smash error: chdir failed");
+            return;
+        }
     }
-    else
-    {
-        char cwd[1024];
-        getcwd(cwd, 1024);
-        SmallShell::getInstance().addCD( cwd);
-        if(chdir(args[1].c_str())==-1)
-            {
-                perror("smash error: chdir failed");
-            }
-    }
+    char cwd[1024];
+    SmallShell::getInstance().addCD(getcwd(cwd, 1024));
 }
 
 void ForegroundCommand::execute()
@@ -764,7 +751,7 @@ void SimpleCommand::execute()
         cmdPid = pid;
         execv(argsTable[0].c_str(), argsTable->c_str());
         perror("smash error: execv failed");
-        exit();
+        exit(errno);
 }
 
 void ComplexCommand::execute()
@@ -789,46 +776,57 @@ void ComplexCommand::execute()
         setpgrp();
         execv(argsTable[0].c_str(),argsTable->c_str());
         perror("smash error: execv failed");
-        exit();
+        exit(errno);
+}
+
+PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
+{
+    string cmd_s = _trim(string(cmdLine));
+    char* argTable[2];
+    splitByArg(cmdLine, '|', argTable);
+    int fd[2];
+    if (pipe(fd) == -1)
+    {
+        perror("pipe unsuccessful");
+        return;
+    }
+    if (fork() == 0)        //first command
+    {
+        if(cmd_s.find("|&") < cmd_s.length())       //errors pipe
+            dup2(fd[1], 2);
+        else
+            dup2(fd[1], 1);
+        close(fd[0]);
+        close(fd[1]);
+        pipeCommand = SmallShell::getInstance().BuiltIn(argTable[0]);
+        if (!pipeCommand)
+        {
+            if (cmd_s.find('*') < cmd_s.length() || cmd_s.find('?') < cmd_s.length())
+                pipeCommand = new ComplexCommand(cmd_line);
+            else
+                pipeCommand = new SimpleCommand(cmd_line);
+        }
+        return;
+    }
+    if (fork() == 0)        //second command
+    {
+        dup2(fd[0], 0);
+        pipeCommand = SmallShell::getInstance().BuiltIn(argTable[1]);
+        if (!pipeCommand)
+        {
+            if (cmd_s.find('*') < cmd_s.length() || cmd_s.find('?') < cmd_s.length())
+                pipeCommand = new ComplexCommand(cmd_line);
+            else
+                pipeCommand = new SimpleCommand(cmd_line);
+        }
+    }
+    close(fd[0]);
+    close(fd[1]);
 }
 
 void PipeCommand::execute()
 {
-    string cmd_s = _trim(string(cmdLine));
-    std::string argTable[21];
-    numOfWords(cmdLine,argTable);
-    Command* commandNum1= nullptr;
-    Command* commandNum2= nullptr;
-    commandNum1 = SmallShell::getInstance().CreateCommand(argTable[0].c_str());
-    int suc;
-    int fd[2]={1,0};
-    if(commandNum1 == nullptr)
-    {
-        return;
-    }
-    if(cmd_s.find("|") < cmd_s.length())/// if it gets "|" arguement
-    {
-        suc= pipe(fd);
-    }
-    else
-    {
-        fd[0] = 2;
-        suc = pipe(fd);
-    }
-    if(suc==-1)
-    {
-        perror("pipe unsuccessful");
-    }
-
-    commandNum2=SmallShell::getInstance().CreateCommand(argTable[2].c_str()); //need to see how we send arguments
-    if(!(commandNum2))
-    {
-        close(fd[1]);
-    }
-    else
-    {
-        close(fd[0]);
-    }
+    pipeCommand->execute();
 }
 
 void SetcoreCommand::execute()
@@ -836,27 +834,33 @@ void SetcoreCommand::execute()
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>3)
         perror("smash error: setcore: invalid argument");
-    try {
-        jobId = stoi(argTable[1]);
-        core = stoi(argTable[2]);
+    try
+    {
+        int jobId = stoi(argTable[1]);
+        int core = stoi(argTable[2]);
         JobsList::JobEntry* job = SmallShell::getInstance().getJobs()->getJobById(jobId);
         if (!job)
         {
             std::string message = "smash error: setcore: job-id " + to_string(jobId) + " does not exist";
             perror(message.c_str());
+            return;
         }
-        int NumOfCores = sysconf(_SC_NPROCESSORS_ONLN);
-        if (NumOfCores == SYSCALL_FAILED) {
+        long NumOfCores = sysconf(_SC_NPROCESSORS_ONLN);
+        if (NumOfCores == -1)
+        {
             perror("smash error: sysconfig failed");
             return;
         }
-        if (core < 0 || core >= NumOfCores) {
+        if (core < 0 || core >= NumOfCores)
+        {
             perror("smash error: setcore: invalid core number");
+            return;
         }
-        cpu_set_t cpuSet;
-        CPU_ZERO(&cpuSet);
-        CPU_SET(core, &cpuSet);
-        if (sched_setaffinity(job->getPid(), sizeof(cpu_set_t), &cpuSet)) {
+        cpu_set_t cpuSet;               //Define cpu_set bit mask
+        CPU_ZERO(&cpuSet);              //Initialize it all to 0, i.e. no CPUs selected
+        CPU_SET(core, &cpuSet);         //set the bit that represents core
+        if (sched_setaffinity(job->getPid(), sizeof(cpu_set_t), &cpuSet) == -1)
+        {
             perror("smash error: sched_setaffinity failed");
             return;
         }
