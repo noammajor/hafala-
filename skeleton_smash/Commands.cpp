@@ -30,13 +30,13 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 std::string fileNameOpen(const char* cmd_line)
 {
     std::string fileName = cmd_line;
-    if(fileName.find("<<") < fileName.length())
+    if(fileName.find(">>") < fileName.length())
     {
-        return fileName.substr(fileName.find("<<")+2,fileName.length());
+        return fileName.substr(fileName.find(">>")+2,fileName.length());
     }
     else
     {
-        return fileName.substr(fileName.find('<')+1,fileName.length());
+        return fileName.substr(fileName.find('>')+1,fileName.length());
     }
 }
 
@@ -255,6 +255,16 @@ void JobsList::printJobsList()
 
 void JobsList::killAllJobs()
 {
+    for (JobEntry* job : BGround)
+    {
+        if (job->getPid() != SmallShell::getInstance().getSmashPid())
+            kill(job->getPid(), SIGKILL);
+    }
+    for (JobEntry* job : Stopped)
+    {
+        if (job->getPid() != SmallShell::getInstance().getSmashPid())
+            kill(job->getPid(), SIGKILL);
+    }
     BGround.clear();
     Stopped.clear();
 }
@@ -382,7 +392,7 @@ status JobsList::JobEntry::getStat()
 
 void JobsList::JobEntry::printJob()
 {
-    cout << "[" << Job_ID << "] " ; ////////////////continue
+    cout << "[" << Job_ID << "] " ;
     command->printComd();
     cout<<" : "<<getpid()<<" "<<getCurrentTime();
     if (currentStatus == stopped)
@@ -406,6 +416,11 @@ void JobsList::JobEntry::FGjobID()
 }
 
 /////////////////////////////////////////////////  SmallShell   ///////////////////////////////////////////////////////////
+
+SmallShell::~SmallShell()
+{
+    jobsList->killAllJobs();
+}
 
 void SmallShell::changeName(const char* newName)
 {
@@ -453,12 +468,12 @@ JobsList* SmallShell::getJobs()
 Command* SmallShell::CreateCommand(const char* cmd_line)
 {
     string cmd_s = _trim(string(cmd_line));
-    string firstWord = cmd_s.substr(0, cmd_s.find(' '));
+  /*  string firstWord = cmd_s.substr(0, cmd_s.find(' '));
     pid_t pid = 0;   ///////////////////////////////////////////////////// need to have the new command pid!!
     if (firstWord == "timeout")
     {
         Command* timeoutCmd = new TimeoutCommand(cmd_line, pid);
-    }
+    }*/
     _removeBackgroundSign(cmd_s);
     bool isChild  = false;
     bool redirectionHappened = false;
@@ -523,7 +538,7 @@ Command* SmallShell::BuiltIn(const char* cmd_line)
 {
     string firstWord = findCommand(cmd_line);
     if (firstWord == "chprompt")
-        return new ChmodCommand(cmd_line); ///////////////////////////
+        return new ChpromptCommand(cmd_line);
     else if (firstWord == "showpid")
         return new ShowPidCommand(cmd_line);
     else if (firstWord == "pwd")
@@ -540,6 +555,13 @@ Command* SmallShell::BuiltIn(const char* cmd_line)
         return new QuitCommand(cmd_line, jobsList);
     else if (firstWord == "kill")
         return new KillCommand(cmd_line, jobsList);
+
+    else if (firstWord == "setcore")
+        return new SetcoreCommand(cmd_line);
+    else if (firstWord == "getfileinfo")
+        return new GetFileTypeCommand(cmd_line);
+    else if (firstWord == "chmod")
+        return new ChmodCommand(cmd_line);
     return nullptr;
 }
 
@@ -566,7 +588,7 @@ void SmallShell::executeCommand(const char *cmd_line) {
 
 /////////////////////////////////////////////////  Execute Commands   ///////////////////////////////////////////////////////////
 
-void chmpromt::execute()
+void ChpromptCommand::execute()
 {
     string args[21];
     int argsCnt = numOfWords(cmdLine, args);

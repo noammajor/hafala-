@@ -74,10 +74,10 @@ public:
 
 ///////////////////////////////////////////////  BuiltInCommands   ///////////////////////////////////////////////////////////
 
-class chmpromt: public BuiltInCommand {
+class ChpromptCommand: public BuiltInCommand {
 public:
-    explicit chmpromt(const char* cmd_line) : BuiltInCommand(cmd_line){}
-    virtual ~chmpromt() = default;
+    explicit ChpromptCommand(const char* cmd_line) : BuiltInCommand(cmd_line){}
+    virtual ~ChpromptCommand() = default;
     void execute() override;
 };
 
@@ -260,7 +260,7 @@ public:
         }// Instantiated on first use.
     return *instance;
     }
-    ~SmallShell() = default;
+    ~SmallShell();
 
     pid_t getSmashPid() const;
     void addCD(const char* dir);
