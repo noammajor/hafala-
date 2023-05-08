@@ -448,7 +448,7 @@ const char* SmallShell::getCD()
 
 std::string SmallShell::get_name() const
 {
-    return namePrompt;
+    return namePrompt+"> ";
 }
 
 JobsList* SmallShell::getJobs()
