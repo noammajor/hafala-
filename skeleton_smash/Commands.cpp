@@ -41,7 +41,7 @@ bool redirection(const char* cmd_line, bool setTimeout)
 {
     string line = cmd_line;
     bool append = false;
-    if (line.find(">>") < line.length())
+    if (line.find(">>") != string::npos)
         append = true;
     std::string directFile= fileNameOpen(cmd_line);
     pid_t child = fork();
@@ -462,7 +462,7 @@ JobsList* SmallShell::getJobs()
 Command* SmallShell::CreateCommand(const char* cmd_line)
 {
     string cmd_s = _trim(string(cmd_line));
-    _removeBackgroundSign(cmd_s);
+    _removeBackgroundSign(cmd_s);            /////////////////////what if we want it in background?
     bool isChild  = false;
     bool redirectionHappened = false;
     Command* cmd = nullptr;
@@ -472,7 +472,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
     {
         setTimeout = true;
     }
-    if((cmd_s.find('>') < cmd_s.length()) || cmd_s.find(">>") < cmd_s.length())   //redirection Builtin
+    if(cmd_s.find('>') != string::npos || cmd_s.find(">>") != string::npos)   //redirection Builtin
     {
         redirectionHappened = true;
         isChild = redirection(cmd_line, setTimeout);
@@ -481,13 +481,13 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
             cmd = BuiltIn(cmd_line);
         }
     }
-    else if (cmd_s.find('|') < cmd_s.length())
+    else if (cmd_s.find('|') != string::npos)
     {
         cmd = new PipeCommand(cmd_line);
     }
     if(!cmd && redirectionHappened && isChild)      // redirection external
     {
-        if (cmd_s.find('*') < cmd_s.length() || cmd_s.find('?') < cmd_s.length())
+        if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
             cmd = new ComplexCommand(cmd_line);
         else
             cmd = new SimpleCommand(cmd_line);
@@ -498,13 +498,13 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
         if(!cmd && forkExtrenal(setTimeout, cmd_line))
         {
             isChild = true;
-            if (cmd_s.find('*') < cmd_s.length() || cmd_s.find('?') < cmd_s.length())
+            if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
                 cmd = new ComplexCommand(cmd_line);
             else
                 cmd = new SimpleCommand(cmd_line);
         }
     }
-    return nullptr;
+    return cmd;
 }
 
 bool SmallShell::forkExtrenal(bool setTimeout, const char* cmd_line)
@@ -824,7 +824,7 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
     pid_t child1 = fork();
     if (child1 == 0)        //first command
     {
-        if(cmd_s.find("|&") < cmd_s.length())       //errors pipe
+        if(cmd_s.find("|&") != string::npos)       //errors pipe
             dup2(fd[1], 2);
         else
             dup2(fd[1], 1);
@@ -833,7 +833,7 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
         pipeCommand = SmallShell::getInstance().BuiltIn(argTable[0]);
         if (!pipeCommand)
         {
-            if (cmd_s.find('*') < cmd_s.length() || cmd_s.find('?') < cmd_s.length())
+            if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
                 pipeCommand = new ComplexCommand(cmd_line);
             else
                 pipeCommand = new SimpleCommand(cmd_line);
@@ -849,7 +849,7 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
         pipeCommand = SmallShell::getInstance().BuiltIn(argTable[1]);
         if (!pipeCommand)
         {
-            if (cmd_s.find('*') < cmd_s.length() || cmd_s.find('?') < cmd_s.length())
+            if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
                 pipeCommand = new ComplexCommand(cmd_line);
             else
                 pipeCommand = new SimpleCommand(cmd_line);
