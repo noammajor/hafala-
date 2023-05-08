@@ -45,7 +45,7 @@ std::string fileNameOpen(const char* cmd_line)
     }
 }
 
-bool redirection(const char* cmd_line)
+bool redirection(const char* cmd_line, bool setTimeout)
 {
     string line = cmd_line;
     bool append = false;
@@ -76,8 +76,13 @@ bool redirection(const char* cmd_line)
         dup2(1, fd);
         return true;
     }
-    else
+    else     // child > 0
     {
+        if (setTimeout)
+        {
+            Command* timeoutCmd = new TimeoutCommand(cmd_line, child_pid);
+            timeoutCmd->execute();
+        }
         int stat;
         if (wait(&stat) < 0)
             perror("wait failed");
@@ -473,53 +478,52 @@ JobsList* SmallShell::getJobs()
 Command* SmallShell::CreateCommand(const char* cmd_line)
 {
     string cmd_s = _trim(string(cmd_line));
-  /*  string firstWord = cmd_s.substr(0, cmd_s.find(' '));
-    pid_t pid = 0;   ///////////////////////////////////////////////////// need to have the new command pid!!
-    if (firstWord == "timeout")
-    {
-        Command* timeoutCmd = new TimeoutCommand(cmd_line, pid);
-    }*/
     _removeBackgroundSign(cmd_s);
     bool isChild  = false;
     bool redirectionHappened = false;
-    if((cmd_s.find('>') < cmd_s.length()) || cmd_s.find(">>") < cmd_s.length())
+    Command* cmd = nullptr;
+    bool setTimeout = false;
+    string firstWord = cmd_s.substr(0, cmd_s.find(' '));
+    if (firstWord == "timeout")
+    {
+        setTimeout = true;
+    }
+    if((cmd_s.find('>') < cmd_s.length()) || cmd_s.find(">>") < cmd_s.length())   //redirection Builtin
     {
         redirectionHappened = true;
-        isChild = redirection( cmd_line);
-        Command* cmd = BuiltIn(cmd_line);
-        if(cmd)
+        isChild = redirection(cmd_line, setTimeout);
+        if (isChild)
         {
-            return cmd;
+            cmd = BuiltIn(cmd_line);
         }
     }
     else if (cmd_s.find('|') < cmd_s.length())
     {
-        return new PipeCommand(cmd_line);
+        cmd = new PipeCommand(cmd_line);
     }
-    if(redirectionHappened && isChild)
+    if(!cmd && redirectionHappened && isChild)      // redirection external
     {
         if (cmd_s.find('*') < cmd_s.length() || cmd_s.find('?') < cmd_s.length())
-            return new ComplexCommand(cmd_line);
+            cmd = new ComplexCommand(cmd_line);
         else
-            return new SimpleCommand(cmd_line);
+            cmd = new SimpleCommand(cmd_line);
     }
-    if(!redirectionHappened)
+    if(!cmd && !redirectionHappened)
     {
         Command* cmd = BuiltIn(cmd_line);
-        if (cmd)
-            return cmd;
-        else if(forkExtrenal())
+        if(!cmd && forkExtrenal(setTimeout))
         {
+            isChild = true;
             if (cmd_s.find('*') < cmd_s.length() || cmd_s.find('?') < cmd_s.length())
-                return new ComplexCommand(cmd_line);
+                cmd =n new ComplexCommand(cmd_line);
             else
-                return new SimpleCommand(cmd_line);
+                cmd = new SimpleCommand(cmd_line);
         }
     }
     return nullptr;
 }
 
-bool SmallShell::forkExtrenal()
+bool SmallShell::forkExtrenal(bool setTimeout)
 {
     pid_t child_pid = fork();
     if(child_pid < 0)
@@ -533,6 +537,11 @@ bool SmallShell::forkExtrenal()
     }
     else            //  child_pid > 0
     {
+        if (setTimeout)
+        {
+            Command* timeoutCmd = new TimeoutCommand(cmd_line, child_pid);
+            timeoutCmd->execute();
+        }
         int status;
         waitpid(child_pid, &status, 0);
     }

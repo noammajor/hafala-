@@ -272,7 +272,8 @@ public:
     std::vector<Timeout_obj*> getAlarmed();
     void add_timeout(Timeout_obj* time);
     Command* BuiltIn(const char* cmd_line);
-    bool forkExtrenal();
+    bool forkExtrenal(bool setTimeout);
+    void executeTimeout(TimeoutCommand* command);
 };
 
 #endif //SMASH_COMMAND_H_
