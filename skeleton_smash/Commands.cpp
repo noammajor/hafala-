@@ -20,6 +20,8 @@ const std::string WHITESPACE = " \n\r\t\f\v";
 #endif
 
 
+SmallShell* SmallShell::instance = nullptr;
+
 ///////////////////////////////////////////////  General Functions   ///////////////////////////////////////////////////////////
 
 std::string fileNameOpen(const char* cmd_line)
@@ -212,12 +214,6 @@ void Command::cleanup()
 
 }
 
-/////////////////////////////////////////////////  ExternalCommands   ///////////////////////////////////////////////////////////
-
-pid_t ExternalCommand::getPid() const
-{
-    return cmdPid;
-}
 
 /////////////////////////////////////////////////  Jobs   ///////////////////////////////////////////////////////////
 
@@ -771,8 +767,6 @@ void SimpleCommand::execute()
             argsTable[argsCnt-1] = '\0';
         SmallShell::getInstance().getJobs()->addJob(this);
     }
-        pid_t pid = getpid();
-        cmdPid = pid;
     char** argv = new char* [argsCnt];
     for(int i=0;i<argsCnt;i++)
     {
@@ -800,7 +794,6 @@ void ComplexCommand::execute()
         SmallShell::getInstance().getJobs()->addJob(this);
     }
         pid_t pid = getpid();
-        cmdPid = pid;
         JobsList::JobEntry* job = new JobsList::JobEntry(forground, pid, this);
         job->FGjobID();
         SmallShell::getInstance().getJobs()->addToFG(job);

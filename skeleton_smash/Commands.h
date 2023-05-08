@@ -25,16 +25,14 @@ protected:
     const char* cmdLine;
 public:
     Command(const char* cmd_line) : cmdLine(cmd_line){}
-    virtual ~Command();
+    virtual ~Command() {}
     virtual void execute() = 0;
     void printComd() const;
     //virtual void prepare();
     virtual void cleanup();
     // TODO: Add your extra methods if needed
 };
-class SmallShell;
-class JobsCommand;
-class Command;
+
 class BuiltInCommand : public Command{
 public:
     BuiltInCommand(const char* cmd_line): Command(cmd_line){}
@@ -43,15 +41,10 @@ public:
 };
 
 class ExternalCommand : public Command {
-protected:
-    bool fdUsed;
-    pid_t cmdPid;
 public:
-    ExternalCommand(const char* cmd_line): Command(cmd_line), fdUsed(false), cmdPid(-1){}
-    virtual ~ExternalCommand() = default;
-    void execute() override;
-    void changeFd(const bool append,const std::string directFile);
-    pid_t getPid() const;
+    explicit ExternalCommand(const char* cmd_line): Command(cmd_line){}
+    virtual ~ExternalCommand() {}
+    virtual void execute() = 0;
 };
 
 class SimpleCommand : public ExternalCommand
@@ -188,9 +181,9 @@ public:
 };
 
 class JobsCommand : public BuiltInCommand {
- // TODO: Add your data members
+    JobsList* jobs;
 public:
-    JobsCommand(const char* cmd_line, JobsList* jobs);
+    JobsCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs){}
     virtual ~JobsCommand() {}
     void execute() override;
 };
@@ -260,10 +253,12 @@ private:
     const char* curCD;
     JobsList* jobsList;
     std::vector<Timeout_obj*> timeout;
-    static SmallShell* instance; // Guaranteed to be destroyed.
+
 
     SmallShell(): namePrompt("smash"), smashPid(getpid()), curCD(nullptr), jobsList(nullptr), timeout(){}
 public:
+    static SmallShell* instance; // Guaranteed to be destroyed.
+
     Command *CreateCommand(const char* cmd_line);
     SmallShell(SmallShell const&)      = delete; // disable copy ctor
     void operator=(SmallShell const&)  = delete; // disable = operator
