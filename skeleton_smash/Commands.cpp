@@ -1,17 +1,4 @@
-#include <unistd.h>
-#include <iostream>
-#include <fstream>
-#include <cstdio>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <sys/stat.h>
-#include <sstream>
-#include <sys/wait.h>
-#include <iomanip>
 #include "Commands.h"
-#include <cstring>
-#include <filesystem>
-#include <chrono>
 
 
 using namespace std;
@@ -63,11 +50,11 @@ bool redirection(const char* cmd_line, bool setTimeout)
         int fd;
         if (append)
         {
-            fd = open(directFile, ios::app | ios::out);
+            fd = open(directFile.c_str(), ios::app | ios::out);
         }
         if (!(append))
         {
-            fd = open(directFile, ios::trunc | ios::out);
+            fd = open(directFile.c_str(), ios::trunc | ios::out);
         }
         if (fd<0)
         {
@@ -80,14 +67,12 @@ bool redirection(const char* cmd_line, bool setTimeout)
     {
         if (setTimeout)
         {
-            Command* timeoutCmd = new TimeoutCommand(cmd_line, child_pid);
+            Command* timeoutCmd = new TimeoutCommand(cmd_line, child);
             timeoutCmd->execute();
         }
-        int stat;
-        if (wait(&stat) < 0)
+        int status;
+        if (waitpid(child,&status,0) < 0)
             perror("wait failed");
-        else
-            chkStatus(child, stat);
     }
     return false;
 }
@@ -511,11 +496,11 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
     if(!cmd && !redirectionHappened)
     {
         Command* cmd = BuiltIn(cmd_line);
-        if(!cmd && forkExtrenal(setTimeout))
+        if(!cmd && forkExtrenal(setTimeout,cmd_line))
         {
             isChild = true;
             if (cmd_s.find('*') < cmd_s.length() || cmd_s.find('?') < cmd_s.length())
-                cmd =n new ComplexCommand(cmd_line);
+                cmd = new ComplexCommand(cmd_line);
             else
                 cmd = new SimpleCommand(cmd_line);
         }
@@ -523,7 +508,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
     return nullptr;
 }
 
-bool SmallShell::forkExtrenal(bool setTimeout)
+bool SmallShell::forkExtrenal(bool setTimeout, const char* cmd_line)
 {
     pid_t child_pid = fork();
     if(child_pid < 0)
@@ -929,6 +914,7 @@ bool is_file_exist(const char *fileName)
 
 void GetFileTypeCommand::execute()
 {
+    std::string output;
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>2)
     {
@@ -938,40 +924,42 @@ void GetFileTypeCommand::execute()
     {
         perror("smash error: gettype: invalid arguments");
     }
-    std::string output;
+    struct stat stat_buf;
+
+    stat(argTable[1].c_str(),&stat_buf);
      output = argTable[1] + "\'s" + " type is ";
-     std::filesystem::path filepath(argTable[1]);
-        {
-            if(std::filesystem::is_regular_file(filepath.symlink_status()))
+     if(S_ISREG(stat_buf.st_mode))
             {
                 output= output + "\"regular file\"";
             }
-            else if (std::filesystem::is_directory(filepath.symlink_status()))
+     else if (S_ISDIR(stat_buf.st_mode))
             {
                 output = output + "\"directory file\"";
             }
-            else if (std::filesystem::is_symlink(filepath.symlink_status()))
+     else if (S_ISLNK(stat_buf.st_mode))
             {
                 output= output + "\"symbolic link file\"";
             }
-            else if(std::filesystem::is_block_file(filepath.symlink_status()))
+     else if(S_ISBLK(stat_buf.st_mode))
             {
                 output= output + "\"block file\"";
             }
-            else if (std::filesystem::is_character_file(filepath.symlink_status()))
+     else if (S_ISCHR(stat_buf.st_mode))
             {
                 output= output + "\"character file\"";
             }
-            else if (std::filesystem::is_fifo(filepath.symlink_status()))
+     else if (S_ISFIFO(stat_buf.st_mode))
             {
                 output= output + "\"FIFO file\"";
             }
-            else if(std::filesystem::is_socket(filepath.symlink_status()))
+     else if(S_ISSOCK(stat_buf.st_mode))
             {
                 output= output + "\"socket file\"";
             }
-        }
-        int fileSize= std::filesystem::file_size(argTable[1]);
+
+        ifstream in_file(argTable[1],ios::binary);
+        in_file.seekg(0,ios::end);
+        int fileSize=in_file.tellg();
         output = output + " and takes up " + to_string(fileSize) + " bytes";
         cout << output;
 }

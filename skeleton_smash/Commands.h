@@ -4,6 +4,19 @@
 #include <vector>
 #include <time.h>
 #include <fstream>
+#include <unistd.h>
+#include <iostream>
+#include <fstream>
+#include <cstdio>
+#include <sys/stat.h>
+#include <sstream>
+#include <sys/wait.h>
+#include <iomanip>
+#include <cstring>
+#include <filesystem>
+#include <chrono>
+#include <fcntl.h>
+#include <sys/types.h>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 
@@ -272,8 +285,7 @@ public:
     std::vector<Timeout_obj*> getAlarmed();
     void add_timeout(Timeout_obj* time);
     Command* BuiltIn(const char* cmd_line);
-    bool forkExtrenal(bool setTimeout);
-    void executeTimeout(TimeoutCommand* command);
+    bool forkExtrenal(bool setTimeout,const char* cmd_line);
 };
 
 #endif //SMASH_COMMAND_H_

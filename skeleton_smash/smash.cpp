@@ -1,8 +1,11 @@
+#define _XOPEN_SOURCE 700
+
 #include <iostream>
 #include <unistd.h>
 #include <sys/wait.h>
 #include "Commands.h"
 #include "signals.h"
+#include <csignal>
 
 int main(int argc, char* argv[]) {
     if(signal(SIGTSTP , ctrlZHandler)==SIG_ERR) {
@@ -11,11 +14,13 @@ int main(int argc, char* argv[]) {
     if(signal(SIGINT , ctrlCHandler)==SIG_ERR) {
         perror("smash error: failed to set ctrl-C handler");
     }
-    if(sigaction(SIG_ALRM , alarmHandler, SA_RESTART)==SIG_ERR) {
+
+    struct sigaction sigact;
+    sigact.sa_handler = &alarmHandler;
+    sigact.sa_flags = SA_RESTART;
+    if (sigaction(SIGALRM , &sigact, 0)==-1) {
         perror("smash error: failed to set timeout handler");
     }
-
-    //TODO: setup sig alarm handler
 
     SmallShell& smash = SmallShell::getInstance();
     while(true)
