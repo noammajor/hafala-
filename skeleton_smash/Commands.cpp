@@ -1,4 +1,7 @@
 #include "Commands.h"
+#include <cstring>
+#include <filesystem>
+#include <chrono>
 
 
 using namespace std;
@@ -244,7 +247,6 @@ void JobsList::printJobsList()
             else
                 bgJob->printJob();
         }
-        cout << "\n";
     }
 }
 
@@ -392,6 +394,7 @@ void JobsList::JobEntry::printJob()
     cout<<" : "<<getpid()<<" "<<getCurrentTime();
     if (currentStatus == stopped)
         cout << " (stopped)";
+    cout << "\n";
 }
 
 Command* JobsList::JobEntry::getCommand()
@@ -495,8 +498,8 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
     }
     if(!cmd && !redirectionHappened)
     {
-        Command* cmd = BuiltIn(cmd_line);
-        if(!cmd && forkExtrenal(setTimeout,cmd_line))
+        cmd = BuiltIn(cmd_line);
+        if(!cmd && forkExtrenal(setTimeout, cmd_line))
         {
             isChild = true;
             if (cmd_s.find('*') < cmd_s.length() || cmd_s.find('?') < cmd_s.length())
@@ -603,7 +606,7 @@ void ChpromptCommand::execute()
 
 void ShowPidCommand::execute()
 {
-    cout << "smash pid is "<< to_string(getpid());
+    cout << "smash pid is "<< to_string(getpid()) << endl;
 }
 
 void GetCurrDirCommand::execute()
@@ -825,7 +828,8 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
         perror("pipe unsuccessful");
         return;
     }
-    if (fork() == 0)        //first command
+    pid_t child1 = fork();
+    if (child1 == 0)        //first command
     {
         if(cmd_s.find("|&") < cmd_s.length())       //errors pipe
             dup2(fd[1], 2);
@@ -843,7 +847,10 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
         }
         return;
     }
-    if (fork() == 0)        //second command
+    else if (child1 < 0)
+        perror("smash error: fork failed");
+    pid_t child2 = fork();
+    if (child2 == 0)        //second command
     {
         dup2(fd[0], 0);
         pipeCommand = SmallShell::getInstance().BuiltIn(argTable[1]);
@@ -855,6 +862,8 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
                 pipeCommand = new SimpleCommand(cmd_line);
         }
     }
+    else if (child2 < 0)
+        perror("smash error: fork failed");
     close(fd[0]);
     close(fd[1]);
 }
@@ -961,7 +970,7 @@ void GetFileTypeCommand::execute()
         in_file.seekg(0,ios::end);
         int fileSize=in_file.tellg();
         output = output + " and takes up " + to_string(fileSize) + " bytes";
-        cout << output;
+        cout << output << endl;
 }
 
 void ChmodCommand::execute()
@@ -969,12 +978,12 @@ void ChmodCommand::execute()
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>3)
     {
-        perror("smash error: gettype: invalid aruments");
+        perror("smash error: gettype: invalid arguments");
     }
     const char* filename =  argTable[2].c_str();
     int permissions = std::stoi(argTable[1], nullptr, 8);
     int result = chmod(filename, permissions);
-    if(result<0)
+    if(result < 0)
     {
         perror("smash error: chmod failed");
     }
