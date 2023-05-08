@@ -1,5 +1,10 @@
 #include <unistd.h>
 #include <iostream>
+#include <fstream>
+#include <cstdio>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/stat.h>
 #include <sstream>
 #include <sys/wait.h>
 #include <iomanip>
@@ -771,7 +776,14 @@ void SimpleCommand::execute()
     }
         pid_t pid = getpid();
         cmdPid = pid;
-        execv(argsTable[0].c_str(), argsTable->c_str());
+    char** argv = new char* [argsCnt];
+    for(int i=0;i<argsCnt;i++)
+    {
+        char* strCopy = new char[argsTable[i].size()+1];
+        std::strcpy(strCopy,argsTable[i].c_str());
+        argv[i]=strCopy;
+    }
+        execv(argsTable[0].c_str(), argv);
         perror("smash error: execv failed");
         exit(errno);
 }
@@ -796,7 +808,14 @@ void ComplexCommand::execute()
         job->FGjobID();
         SmallShell::getInstance().getJobs()->addToFG(job);
         setpgrp();
-        execv(argsTable[0].c_str(),argsTable->c_str());
+         char** argv = new char* [argsCnt];
+        for(int i=0;i<argsCnt;i++)
+         {
+            char* strCopy = new char[argsTable[i].size()+1];
+            std::strcpy(strCopy,argsTable[i].c_str());
+            argv[i]=strCopy;
+         }
+        execv(argsTable[0].c_str(),argv);
         perror("smash error: execv failed");
         exit(errno);
 }
@@ -910,20 +929,40 @@ void GetFileTypeCommand::execute()
     {
         perror("smash error: gettype: invalid arguments");
     }
-    namespace fs = std::filesystem;
     std::string output;
-     output = argTable[0] + "\'s" + " type is ";
-    switch(argTable[1].type())
+     output = argTable[1] + "\'s" + " type is ";
+     std::filesystem::path filepath(argTable[1]);
         {
-            case fs::file_type::regular: output= output + "\"regular file\""; break;
-            case fs::file_type::directory: output= output + "\"directory file\""; break;
-            case fs::file_type::symlink: output= output + "\"symbolic link file\""; break;
-            case fs::file_type::block: output= output + "\"block file\""; break;
-            case fs::file_type::character:output= output + "\"character file\""; break;
-            case fs::file_type::fifo: output= output + "\"FIFO file\""; break;
-            case fs::file_type::socket: output= output + "\"socket file\""; break;
+            if(std::filesystem::is_regular_file(filepath.symlink_status()))
+            {
+                output= output + "\"regular file\"";
+            }
+            else if (std::filesystem::is_directory(filepath.symlink_status()))
+            {
+                output = output + "\"directory file\"";
+            }
+            else if (std::filesystem::is_symlink(filepath.symlink_status()))
+            {
+                output= output + "\"symbolic link file\"";
+            }
+            else if(std::filesystem::is_block_file(filepath.symlink_status()))
+            {
+                output= output + "\"block file\"";
+            }
+            else if (std::filesystem::is_character_file(filepath.symlink_status()))
+            {
+                output= output + "\"character file\"";
+            }
+            else if (std::filesystem::is_fifo(filepath.symlink_status()))
+            {
+                output= output + "\"FIFO file\"";
+            }
+            else if(std::filesystem::is_socket(filepath.symlink_status()))
+            {
+                output= output + "\"socket file\"";
+            }
         }
-        int fileSize= std::filesystem::file_size(argTable[0]);
+        int fileSize= std::filesystem::file_size(argTable[1]);
         output = output + " and takes up " + to_string(fileSize) + " bytes";
         cout << output;
 }
@@ -938,6 +977,10 @@ void ChmodCommand::execute()
     const char* filename =  argTable[2].c_str();
     int permissions = std::stoi(argTable[1], nullptr, 8);
     int result = chmod(filename, permissions);
+    if(result<0)
+    {
+        perror("smash error: chmod failed");
+    }
 }
 
 void QuitCommand::execute()
