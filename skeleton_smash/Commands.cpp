@@ -64,7 +64,7 @@ bool redirection(const char* cmd_line)
         {
             fd = open(directFile, ios::trunc | ios::out);
         }
-        if (!(my_file))
+        if (fd<0)
         {
             perror("Cannot open file"); ///not defined in the project
         }
@@ -161,7 +161,7 @@ int numOfWords(const char* getNum, string* argsTable)
 void splitByArg(const char* line, char arg, char** result)
 {
     string lineString = line;
-    for (int i = 0 ; i < lineString.find(arg) ; i++)
+    for (int i = 0 ; i < (int)lineString.find(arg) ; i++)
     {
         result[0] += lineString[i];
     }
@@ -210,7 +210,7 @@ void Command::printComd() const
 void Command::cleanup()
 {
     if (getpid() != SmallShell::getInstance().getSmashPid())
-        exit();
+        exit(0);
 
 }
 
@@ -444,7 +444,7 @@ pid_t SmallShell::getSmashPid() const
 
 void SmallShell::addCD(const char* dir)
 {
-    curCD - dir;
+    curCD = dir;
 }
 
 const char* SmallShell::getCD()
@@ -480,7 +480,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
     if((cmd_s.find('>') < cmd_s.length()) || cmd_s.find(">>") < cmd_s.length())
     {
         redirectionHappened = true;
-        isChild = redirection(char * cmd_line);
+        isChild = redirection( cmd_line);
         Command* cmd = BuiltIn(cmd_line);
         if(cmd)
         {
