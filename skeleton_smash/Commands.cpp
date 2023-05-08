@@ -137,24 +137,26 @@ void _removeBackgroundSign(string cmd_line)
     cmd_line[cmd_line.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
-int numOfWords(const char* getNum, string* argsTable)
+int numOfWords(const char* cmd_line, string* argsTable)
 {
-    int count = 0;
-    string cur = &getNum[0];
+    string line = _trim(cmd_line);
+    int count = 1;
+    string cur;
+    cur += line[0];
     int index = 0;
-    for(int i = 1 ; i < (int)strlen(getNum) ; i++)
+    for(int i = 1 ; i < (int)line.length() ; i++)
     {
-
-        if((strcmp(&getNum[i]," ") != 0 && strcmp(&getNum[i-1]," ") == 0) || (i==1 && strcmp(&getNum[0]," ")!=0 && strcmp(&getNum[1]," ")==0))
+        if(line[i-1] != ' ' && line[i] == ' ')
         {
             count++;
             argsTable[index++] = cur;
             cur = "";
         }
         else
-            cur += &getNum[i];
-        argsTable[index] = '\0';
+            cur += line[i];
     }
+    argsTable[index++] = cur;
+    argsTable[index] = '\0';
     return count;
 }
 
@@ -266,10 +268,10 @@ void JobsList::removeFinishedJobs()
 {
     for (int i = (int)BGround.size() ; i > 0 ; i--)
     {
-        if (kill(BGround[i]->getPid(), 0) == -1)
+        if (BGround[i-1] && kill(BGround[i-1]->getPid(), 0) == -1)
         {
-            delete BGround[i];
-            BGround.erase(BGround.begin() + i);
+            delete BGround[i-1];
+            BGround.erase(BGround.begin() + i - 1);
         }
     }
 }
@@ -418,17 +420,7 @@ SmallShell::~SmallShell()
 
 void SmallShell::changeName(const char* newName)
 {
-    string args[21];
-    if(numOfWords(newName, args) < 2)
-    {
-        namePrompt = "smash" ;
-        return;
-    }
-    else
-    {
-        namePrompt = args[1];
-        return;
-    }
+    namePrompt = newName;
 }
 
 pid_t SmallShell::getSmashPid() const
@@ -501,7 +493,9 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
             if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
                 cmd = new ComplexCommand(cmd_line);
             else
+            {
                 cmd = new SimpleCommand(cmd_line);
+            }
         }
     }
     return cmd;
@@ -588,7 +582,7 @@ void SmallShell::executeCommand(const char *cmd_line) {
 
 void ChpromptCommand::execute()
 {
-    string args[21];
+    string args[22];
     int argsCnt = numOfWords(cmdLine, args);
     if (argsCnt == 1)
     {
@@ -757,7 +751,7 @@ void JobsCommand::execute()
 void SimpleCommand::execute()
 {
     std::string argsTable[22];
-    int argsCnt = numOfWords(cmdLine,argsTable);
+    int argsCnt = numOfWords(cmdLine, argsTable);
     bool exists = _isBackgroundComamnd(cmdLine);
     if (exists)
     {
@@ -767,16 +761,18 @@ void SimpleCommand::execute()
             argsTable[argsCnt-1] = '\0';
         SmallShell::getInstance().getJobs()->addJob(this);
     }
-    char** argv = new char* [argsCnt];
-    for(int i=0;i<argsCnt;i++)
+    char** argv = new char* [argsCnt + 1];
+    for(int i = 0 ; i < argsCnt ; i++)
     {
         char* strCopy = new char[argsTable[i].size()+1];
         std::strcpy(strCopy,argsTable[i].c_str());
         argv[i]=strCopy;
     }
-        execv(argsTable[0].c_str(), argv);
-        perror("smash error: execv failed");
-        exit(errno);
+    argv[argsCnt] = nullptr;
+    argsTable[0] = "/bin/" + argsTable[0];
+    execv(argsTable[0].c_str(), argv);
+    perror("smash error: execv failed");
+    exit(errno);
 }
 
 void ComplexCommand::execute()

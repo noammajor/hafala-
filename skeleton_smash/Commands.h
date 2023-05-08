@@ -158,7 +158,6 @@ public:
     JobEntry* FGround;
     std::vector<JobEntry*> BGround;
     std::vector<JobEntry*> Stopped;
- // TODO: Add your data members
 
 public:
     JobsList(): FGround(nullptr), BGround(), Stopped(){}
@@ -255,7 +254,7 @@ private:
     std::vector<Timeout_obj*> timeout;
 
 
-    SmallShell(): namePrompt("smash"), smashPid(getpid()), curCD(nullptr), jobsList(nullptr), timeout(){}
+    SmallShell(): namePrompt("smash"), smashPid(getpid()), curCD(nullptr), jobsList(new JobsList), timeout(){}
 public:
     static SmallShell* instance; // Guaranteed to be destroyed.
 
