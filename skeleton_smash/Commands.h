@@ -32,7 +32,9 @@ public:
     virtual void cleanup();
     // TODO: Add your extra methods if needed
 };
-
+class SmallShell;
+class JobsCommand;
+class Command;
 class BuiltInCommand : public Command{
 public:
     BuiltInCommand(const char* cmd_line): Command(cmd_line){}
@@ -46,7 +48,7 @@ protected:
     pid_t cmdPid;
 public:
     ExternalCommand(const char* cmd_line): Command(cmd_line), fdUsed(false), cmdPid(-1){}
-    virtual ~ExternalCommand();
+    virtual ~ExternalCommand() = default;
     void execute() override;
     void changeFd(const bool append,const std::string directFile);
     pid_t getPid() const;
