@@ -19,7 +19,7 @@ void ctrlZHandler(int sig_num) {
     {
         SmallShell::getInstance().getJobs()->addToStopped(job);
     }
-    kill(job->getPid(), SIGSTP);
+    kill(job->getPid(), SIGSTOP);
     cout << "smash: process " << to_string(job->getPid()) << " was stopped" ;
 }
 
