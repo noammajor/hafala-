@@ -254,7 +254,6 @@ void JobsList::printJobsList()
             else
                 bgJob->printJob();
         }
-        cout << "\n";
     }
 }
 
@@ -402,6 +401,7 @@ void JobsList::JobEntry::printJob()
     cout<<" : "<<getpid()<<" "<<getCurrentTime();
     if (currentStatus == stopped)
         cout << " (stopped)";
+    cout << "\n";
 }
 
 Command* JobsList::JobEntry::getCommand()
@@ -505,7 +505,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
     }
     if(!cmd && !redirectionHappened)
     {
-        Command* cmd = BuiltIn(cmd_line);
+        cmd = BuiltIn(cmd_line);
         if(!cmd && forkExtrenal(setTimeout))
         {
             isChild = true;
@@ -613,7 +613,7 @@ void ChpromptCommand::execute()
 
 void ShowPidCommand::execute()
 {
-    cout << "smash pid is "<< to_string(getpid());
+    cout << "smash pid is "<< to_string(getpid()) << endl;
 }
 
 void GetCurrDirCommand::execute()
@@ -821,7 +821,8 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
         perror("pipe unsuccessful");
         return;
     }
-    if (fork() == 0)        //first command
+    pid_t child1 = fork();
+    if (child1 == 0)        //first command
     {
         if(cmd_s.find("|&") < cmd_s.length())       //errors pipe
             dup2(fd[1], 2);
@@ -839,7 +840,10 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
         }
         return;
     }
-    if (fork() == 0)        //second command
+    else if (child1 < 0)
+        perror("smash error: fork failed");
+    pid_t child2 = fork();
+    if (child2 == 0)        //second command
     {
         dup2(fd[0], 0);
         pipeCommand = SmallShell::getInstance().BuiltIn(argTable[1]);
@@ -851,6 +855,8 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
                 pipeCommand = new SimpleCommand(cmd_line);
         }
     }
+    else if (child2 < 0)
+        perror("smash error: fork failed");
     close(fd[0]);
     close(fd[1]);
 }
@@ -934,7 +940,7 @@ void GetFileTypeCommand::execute()
         }
         int fileSize= std::filesystem::file_size(argTable[0]);
         output = output + " and takes up " + to_string(fileSize) + " bytes";
-        cout << output;
+        cout << output << endl;
 }
 
 void ChmodCommand::execute()
@@ -942,11 +948,13 @@ void ChmodCommand::execute()
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>3)
     {
-        perror("smash error: gettype: invalid aruments");
+        perror("smash error: gettype: invalid arguments");
     }
     const char* filename =  argTable[2].c_str();
     int permissions = std::stoi(argTable[1], nullptr, 8);
     int result = chmod(filename, permissions);
+    if (result == -1)
+        perror("smash error: chmod faild");
 }
 
 void QuitCommand::execute()
