@@ -143,7 +143,7 @@ public:
         pid_t pid;
         const char* cmdLine;
     public:
-        JobEntry(status starting, int id, const char* cmd_line) : begin(time(NULL)), currentStatus(starting), Job_ID(id), cmdLine(cmd_line){}
+        JobEntry(status starting, int id, pid_t pid, const char* cmd_line) : begin(time(NULL)), currentStatus(starting), Job_ID(id), pid(pid), cmdLine(cmd_line){}
         ~JobEntry() = default;
         time_t getCurrentTime();
         int getJobId();
@@ -163,7 +163,7 @@ public:
 public:
     JobsList(): FGround(nullptr), BGround(), Stopped(){}
     ~JobsList() = default;
-    void addJob(const char* cmd_line, bool isStopped = false);
+    void addJob(const char* cmd_line, pid_t pid, bool isStopped = false);
     void printJobsList();
     void killAllJobs();
     void removeFinishedJobs();

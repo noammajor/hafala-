@@ -12,7 +12,7 @@ void ctrlZHandler(int sig_num) {
     SmallShell::getInstance().getJobs()->addToFG(nullptr);
     if (job->getJobId() == -1)
     {
-        SmallShell::getInstance().getJobs()->addJob(job->getCmdLine(), true);
+        SmallShell::getInstance().getJobs()->addJob(job->getCmdLine(), job->getPid(), true);
         delete job;
     }
     else

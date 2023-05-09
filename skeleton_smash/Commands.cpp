@@ -220,17 +220,18 @@ void Command::cleanup()
 /////////////////////////////////////////////////  Jobs   ///////////////////////////////////////////////////////////
 
 
-void JobsList::addJob(const char* cmd_line, bool isStopped)
+void JobsList::addJob(const char* cmd_line, pid_t pid, bool isStopped)
 {
     if (isStopped)
     {
-        JobEntry job = JobEntry(stopped, getNextJobID(), cmd_line);
-        Stopped.push_back(&job);
+        JobEntry* job = new JobEntry(stopped, getNextJobID(), pid, cmd_line);
+        Stopped.push_back(job);
     }
     else
     {
-        JobEntry job = JobEntry(background, getNextJobID(), cmd_line);
-        Stopped.push_back(&job);
+        cout << "add job"<< endl;
+        JobEntry* job = new JobEntry(background, getNextJobID(), pid, cmd_line);
+        BGround.push_back(job);
     }
 }
 
@@ -268,8 +269,10 @@ void JobsList::removeFinishedJobs()
 {
     for (int i = (int)BGround.size() ; i > 0 ; i--)
     {
-        if (BGround[i-1] && kill(BGround[i-1]->getPid(), 0) == -1)
+        if (BGround[i-1] && kill(BGround[i-1]->getPid(), 0) != 0)
         {
+            cout << "pid: " << BGround[i-1]->getPid() << endl;
+            cout << "delete " << i << endl;
             delete BGround[i-1];
             BGround.erase(BGround.begin() + i - 1);
         }
@@ -329,8 +332,12 @@ JobsList::JobEntry * JobsList::getLastStoppedJob()
 int JobsList::getNextJobID ()
 {
     removeFinishedJobs();
-    int maxBG = BGround.back()->getJobId();
-    int maxStopped = Stopped.back()->getJobId();
+    int maxBG = 0;
+    int maxStopped = 0;
+    if ((int)BGround.size() > 0)
+        maxBG = BGround.back()->getJobId();
+    if((int)Stopped.size() > 0 )
+        maxStopped = Stopped.back()->getJobId();
     return ( maxBG > maxStopped ? maxBG+1 : maxStopped+1 );
 }
 
@@ -456,12 +463,11 @@ JobsList* SmallShell::getJobs()
 */
 Command* SmallShell::CreateCommand(const char* cmd_line)
 {
-    cout << "create";
     string cmd_s = _trim(string(cmd_line));
     bool runInBack = false;
     if (_isBackgroundComamnd(cmd_line))
         runInBack = true;
-    _removeBackgroundSign(cmd_s);            /////////////////////what if we want it in background?
+    _removeBackgroundSign(cmd_s);
     bool isChild  = false;
     bool redirectionHappened = false;
     Command* cmd = nullptr;
@@ -510,7 +516,6 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
 
 bool SmallShell::forkExtrenal(bool setTimeout, bool runInBack, const char* cmd_line)
 {
-    cout << "fork"; ///////////////////////////////////////////////////////
     pid_t child_pid = fork();
     if(child_pid < 0)
     {
@@ -530,12 +535,11 @@ bool SmallShell::forkExtrenal(bool setTimeout, bool runInBack, const char* cmd_l
         }
         if (runInBack)
         {
-            cout << "inback";
-            SmallShell::getInstance().getJobs()->addJob(cmd_line,false);
+            SmallShell::getInstance().getJobs()->addJob(cmd_line, child_pid,false);
         }
         else
         {
-            JobsList::JobEntry* job = new JobsList::JobEntry(forground, -1, cmd_line);
+            JobsList::JobEntry* job = new JobsList::JobEntry(forground, -1, child_pid, cmd_line);
             SmallShell::getInstance().getJobs()->addToFG(job);
             int status;
             waitpid(child_pid, &status, 0);
@@ -684,7 +688,7 @@ void ForegroundCommand::execute()
             }
             jobs->removeJobById(job->getJobId());
             jobs->moveToFG(job);
-            job->printJob();
+            job->printJob();     /////////////////////////////check print forrmat
             waitpid(pid, &status, 0);
         }
         catch (exception &e)
@@ -814,7 +818,7 @@ void ComplexCommand::execute()
             argsTable[argsCnt-1] = '\0';
     }
         int jobID = SmallShell::getInstance().getJobs()->getNextJobID();
-        JobsList::JobEntry* job = new JobsList::JobEntry(forground, jobID, cmdLine);
+        JobsList::JobEntry* job = new JobsList::JobEntry(forground, jobID, getpid(), cmdLine);
         job->FGjobID();
         SmallShell::getInstance().getJobs()->addToFG(job);
         setpgrp();
@@ -1011,8 +1015,9 @@ void QuitCommand::execute()
     }
     jobs->removeFinishedJobs();
     int jobsNum = jobs->BGround.size() + jobs->Stopped.size();
-    cout << "sending SIGKILL signal to " << to_string(jobsNum) << " jobs" << endl;
-    for(int i = 0 ; i < (int)jobs->BGround.size() ; i++){
+    cout << "sending SIGKILL signal to " << jobsNum << " jobs" << endl;
+    cout << jobs->BGround.size() << "   size   " << jobsNum;
+    /*for(int i = 0 ; i < (int)jobs->BGround.size() ; i++){
         cout << to_string(jobs->BGround[i]->getPid()) << ": ";
         jobs->BGround[i]->printCmd();
         cout << '\n';
@@ -1023,7 +1028,7 @@ void QuitCommand::execute()
         jobs->Stopped[i]->printCmd();
         cout << '\n';
         kill( this->jobs->Stopped[i]->getPid(), SIGKILL);
-    }
+    }*/
     kill(getpid(), SIGKILL);
 }
 
@@ -1040,7 +1045,7 @@ void KillCommand::execute()
         JobsList::JobEntry *job = SmallShell::getInstance().getJobs()->getJobById(stoi(arg[2]));
         if (job)
         {
-            cout << "signal number " + sigNum + "was sent to pid " + to_string(job->getPid()) << endl;
+            cout << "signal number " + sigNum + " was sent to pid " + to_string(job->getPid()) << endl;
             kill(jobs->FGround->getPid(), stoi(sigNum));
             return;
         }
