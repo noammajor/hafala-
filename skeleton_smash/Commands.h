@@ -140,18 +140,19 @@ public:
         time_t begin;
         status currentStatus;
         int Job_ID;
-        Command* command;
         pid_t pid;
+        const char* cmdLine;
     public:
-        JobEntry(status starting, int id, Command*  cmd) : begin(time(NULL)), currentStatus(starting), Job_ID(id), command(cmd){}
+        JobEntry(status starting, int id, const char* cmd_line) : begin(time(NULL)), currentStatus(starting), Job_ID(id), cmdLine(cmd_line){}
         ~JobEntry() = default;
         time_t getCurrentTime();
         int getJobId();
         void changeStatus(status curr);
         status getStat();
         void printJob();
-        Command* getCommand();
+        void  printCmd();
         pid_t getPid() const;
+        const char* getCmdLine();
         void FGjobID();
 
     };
@@ -162,7 +163,7 @@ public:
 public:
     JobsList(): FGround(nullptr), BGround(), Stopped(){}
     ~JobsList() = default;
-    void addJob(Command* cmd, bool isStopped = false);
+    void addJob(const char* cmd_line, bool isStopped = false);
     void printJobsList();
     void killAllJobs();
     void removeFinishedJobs();
@@ -281,7 +282,7 @@ public:
     std::vector<Timeout_obj*> getAlarmed();
     void add_timeout(Timeout_obj* time);
     Command* BuiltIn(const char* cmd_line);
-    bool forkExtrenal(bool setTimeout,const char* cmd_line);
+    bool forkExtrenal(bool setTimeout, bool runInBack, const char* cmd_line);
 };
 
 #endif //SMASH_COMMAND_H_
