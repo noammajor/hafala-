@@ -800,7 +800,6 @@ void SimpleCommand::execute()
         argv[i]=strCopy;
     }
     argv[argsCnt] = nullptr;
-    //argsTable[0] = "/bin/" + argsTable[0];
     execvp(argsTable[0].c_str(), argv);
     perror("smash error: execvp failed");
     exit(errno);
@@ -824,15 +823,16 @@ void ComplexCommand::execute()
         job->FGjobID();
         SmallShell::getInstance().getJobs()->addToFG(job);
         setpgrp();
-        char** argv = new char* [argsCnt];
+        /*char** argv = new char* [argsCnt];
         for(int i = 0 ; i < argsCnt ; i++)
          {
             char* strCopy = new char[argsTable[i].size()+1];
             std::strcpy(strCopy,argsTable[i].c_str());
             argv[i] = strCopy;
-         }
+         }*/
         //execv(argsTable[0].c_str(),argv);
-        char * full_array [] = {(char*)"/bin/bash", (char*)"-c",(char*)cmdLine, nullptr};   //trim
+        _removeBackgroundSign(_trim(cmdLine));
+        char* full_array [] = {(char*)"/bin/bash", (char*)"-c",(char*)cmdLine, nullptr};
         execv("/bin/bash", full_array);
         perror("smash error: execv failed");
         exit(errno);
