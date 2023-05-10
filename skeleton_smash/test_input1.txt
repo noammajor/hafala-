@@ -1,3 +1,4 @@
- timeout 3 sleep 10&
- timeout 3 sleep 10
+showpid > pid.txt
+cat pid.txt
+sleep 1&
 quit kill

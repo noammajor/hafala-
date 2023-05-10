@@ -28,11 +28,11 @@ std::string fileNameOpen(const char* cmd_line)
     std::string fileName = cmd_line;
     if(fileName.find(">>") < fileName.length())
     {
-        return fileName.substr(fileName.find(">>")+2,fileName.length());
+        return _trim(fileName.substr(fileName.find(">>")+2,fileName.length()));
     }
     else
     {
-        return fileName.substr(fileName.find('>')+1,fileName.length());
+        return _trim(fileName.substr(fileName.find('>')+1,fileName.length()));
     }
 }
 
@@ -57,17 +57,17 @@ bool redirection(const char* cmd_line, bool setTimeout)
         int fd;
         if (append)
         {
-            fd = open(directFile.c_str(), ios::app | ios::out);
+            fd = open(directFile.c_str(), O_APPEND|O_CREAT|O_RDWR);
         }
         if (!(append))
         {
-            fd = open(directFile.c_str(), ios::trunc | ios::out);
+            fd = open(directFile.c_str(), O_TRUNC|O_CREAT|O_RDWR);
         }
         if (fd<0)
         {
             perror("Cannot open file"); ///not defined in the project
         }
-        if(dup2(1, fd)==-1)
+        if(dup2(fd, STDOUT_FILENO)==-1)
         {
             perror("smash error: dup2 failed");
         }
@@ -833,7 +833,7 @@ void SimpleCommand::execute()
         argv[i]=strCopy;
     }
     argv[argsCnt] = nullptr;
-    execvp(argsTable[0].c_str(), argv)
+    execvp(argsTable[0].c_str(), argv);
     perror("smash error: execvp failed");
     exit(errno);
 }
@@ -901,7 +901,7 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
         }
         else
         {
-                if (dup2(fd[1], 1) == -1)
+                if (dup2(fd[1], STDOUT_FILENO) == -1)
                 {
                     perror("smash error: dup2 failed");
                 }
@@ -985,14 +985,10 @@ void SetcoreCommand::execute()
             return;
         }
         cpu_set_t cpuSet;               //Define cpu_set bit mask
-        if(CPU_ZERO(&cpuSet) == -1)
-        {
-            perror("smash error: CPU_ZERO failed");
-        }                                //Initialize it all to 0, i.e. no CPUs selected
-        if(CPU_SET(core, &cpuSet) == -1)
-        {
-            perror("smash error: CPU_SET failed");
-        }//set the bit that represents core
+        CPU_ZERO(&cpuSet);
+        //Initialize it all to 0, i.e. no CPUs selected
+        CPU_SET(core, &cpuSet);
+        //set the bit that represents core
         if (sched_setaffinity(job->getPid(), sizeof(cpu_set_t), &cpuSet) == -1)
         {
             perror("smash error: sched_setaffinity failed");
