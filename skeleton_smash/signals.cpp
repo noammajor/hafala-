@@ -19,7 +19,10 @@ void ctrlZHandler(int sig_num) {
     {
         SmallShell::getInstance().getJobs()->addToStopped(job);
     }
-    kill(job->getPid(), SIGSTOP);
+    if(kill(job->getPid(), SIGSTOP)==-1)
+    {
+        perror("smash error: kill failed");
+    }
     cout << "smash: process " << to_string(job->getPid()) << " was stopped" ;
 }
 
@@ -29,7 +32,10 @@ void ctrlCHandler(int sig_num) {
     if (!job)
         return;
     SmallShell::getInstance().getJobs()->addToFG(nullptr);
-    kill(job->getPid(), SIGKILL);
+    if(kill(job->getPid(), SIGKILL)==-1)
+    {
+        perror("smash error: kill failed");
+    }
     cout << "smash: process " << to_string(job->getPid()) << " was killed" ;
     delete job;
 }
@@ -44,7 +50,10 @@ void alarmHandler(int sig_num) {
         {
             cout << obj->cmd_line << " timed out!" << endl;
             if (obj->timeout_pid)
-                kill(obj->timeout_pid, SIGKILL);
+                if(kill(obj->timeout_pid, SIGKILL)==-1)
+                {
+                    perror("smash error: kill failed");
+                }
         }
     }
 }
