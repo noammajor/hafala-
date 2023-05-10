@@ -1,6 +1,5 @@
 #include "Commands.h"
 #include <cstring>
-#include <filesystem>
 #include <chrono>
 
 
@@ -76,7 +75,7 @@ bool redirection(const char* cmd_line, bool setTimeout)
             timeoutCmd->execute();
         }
         int status;
-        if (waitpid(child,&status,0) < 0)
+        if (waitpid(child, &status, 0) < 0)
             perror("wait failed");
     }
     return false;
@@ -229,7 +228,6 @@ void JobsList::addJob(const char* cmd_line, pid_t pid, bool isStopped)
     }
     else
     {
-        cout << "add job"<< endl;
         JobEntry* job = new JobEntry(background, getNextJobID(), pid, cmd_line);
         BGround.push_back(job);
     }
@@ -237,6 +235,7 @@ void JobsList::addJob(const char* cmd_line, pid_t pid, bool isStopped)
 
 void JobsList::printJobsList()
 {
+    removeFinishedJobs();
     for (JobEntry* bgJob: BGround)
     {
         for (JobEntry* stoppedJob: Stopped)
@@ -269,10 +268,10 @@ void JobsList::removeFinishedJobs()
 {
     for (int i = (int)BGround.size() ; i > 0 ; i--)
     {
-        if (BGround[i-1] && kill(BGround[i-1]->getPid(), 0) != 0)
+        int wait_res = waitpid(BGround[i-1]->getPid(), nullptr, WNOHANG);
+        if (wait_res == BGround[i-1]->getPid())
+        //if (BGround[i-1] && kill(BGround[i-1]->getPid(), 0) != 0)
         {
-            cout << "pid: " << BGround[i-1]->getPid() << endl;
-            cout << "delete " << i << endl;
             delete BGround[i-1];
             BGround.erase(BGround.begin() + i - 1);
         }
@@ -375,7 +374,7 @@ JobsList::JobEntry* JobsList::getFGjob() const
 
 time_t JobsList::JobEntry::getCurrentTime()
 {
-    return difftime(this->begin, time(NULL));
+    return difftime(time(NULL),this->begin);
 }
 
 int JobsList::JobEntry::getJobId()
@@ -395,7 +394,7 @@ status JobsList::JobEntry::getStat()
 
 void JobsList::JobEntry::printJob()
 {
-    cout << "[" << Job_ID << "] " << cmdLine << " : "<<getpid()<<" "<<getCurrentTime();
+    cout << "[" << Job_ID << "] " << cmdLine << " : " << pid <<" " << getCurrentTime();
     if (currentStatus == stopped)
         cout << " (stopped)";
     cout << "\n";
@@ -403,7 +402,7 @@ void JobsList::JobEntry::printJob()
 
 void JobsList::JobEntry::printCmd()
 {
-    cout << cmdLine;
+    cout << cmdLine<<endl;
 }
 
 pid_t JobsList::JobEntry::getPid() const
@@ -420,6 +419,7 @@ void JobsList::JobEntry::FGjobID()
 {
     Job_ID = -1;
 }
+
 
 /////////////////////////////////////////////////  SmallShell   ///////////////////////////////////////////////////////////
 
@@ -501,8 +501,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
     {
         cmd = BuiltIn(cmd_line);
         if(!cmd && forkExtrenal(setTimeout, runInBack, cmd_line))
-        {
-            isChild = true;
+        {;
             if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
                 cmd = new ComplexCommand(cmd_line);
             else
@@ -590,13 +589,16 @@ std::vector<Timeout_obj*> SmallShell::getAlarmed()
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
-    Command* cmd = CreateCommand(cmd_line);
-    if(cmd == nullptr)
+    char* cmd = new char[strlen(cmd_line)] ;
+    strcpy(cmd, cmd_line);
+    const char* cmdLine = cmd;
+    Command* command = CreateCommand(cmdLine);
+    if(command == nullptr)
     {
         return;
     }
-    cmd->execute();
-    cmd->cleanup();
+    command->execute();
+    command->cleanup();
 }
 
 
@@ -798,9 +800,9 @@ void SimpleCommand::execute()
         argv[i]=strCopy;
     }
     argv[argsCnt] = nullptr;
-    argsTable[0] = "/bin/" + argsTable[0];
-    execv(argsTable[0].c_str(), argv);
-    perror("smash error: execv failed");
+    //argsTable[0] = "/bin/" + argsTable[0];
+    execvp(argsTable[0].c_str(), argv);
+    perror("smash error: execvp failed");
     exit(errno);
 }
 
@@ -822,14 +824,16 @@ void ComplexCommand::execute()
         job->FGjobID();
         SmallShell::getInstance().getJobs()->addToFG(job);
         setpgrp();
-         char** argv = new char* [argsCnt];
-        for(int i=0;i<argsCnt;i++)
+        char** argv = new char* [argsCnt];
+        for(int i = 0 ; i < argsCnt ; i++)
          {
             char* strCopy = new char[argsTable[i].size()+1];
             std::strcpy(strCopy,argsTable[i].c_str());
-            argv[i]=strCopy;
+            argv[i] = strCopy;
          }
-        execv(argsTable[0].c_str(),argv);
+        //execv(argsTable[0].c_str(),argv);
+        char * full_array [] = {(char*)"/bin/bash", (char*)"-c",(char*)cmdLine, nullptr};   //trim
+        execv("/bin/bash", full_array);
         perror("smash error: execv failed");
         exit(errno);
 }
@@ -848,6 +852,7 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
     pid_t child1 = fork();
     if (child1 == 0)        //first command
     {
+        setpgrp();
         if(cmd_s.find("|&") != string::npos)       //errors pipe
             dup2(fd[1], 2);
         else
@@ -869,6 +874,7 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
     pid_t child2 = fork();
     if (child2 == 0)        //second command
     {
+        setpgrp();
         dup2(fd[0], 0);
         pipeCommand = SmallShell::getInstance().BuiltIn(argTable[1]);
         if (!pipeCommand)
@@ -1014,22 +1020,23 @@ void QuitCommand::execute()
         kill(getpid(), SIGKILL);
     }
     jobs->removeFinishedJobs();
-    int jobsNum = jobs->BGround.size() + jobs->Stopped.size();
+    int jobsNum = (int)jobs->BGround.size() + (int)jobs->Stopped.size();
     cout << "sending SIGKILL signal to " << jobsNum << " jobs" << endl;
-    cout << jobs->BGround.size() << "   size   " << jobsNum;
-    /*for(int i = 0 ; i < (int)jobs->BGround.size() ; i++){
+    for(int i = 0 ; i < (int)jobs->BGround.size() ; i++){
         cout << to_string(jobs->BGround[i]->getPid()) << ": ";
         jobs->BGround[i]->printCmd();
-        cout << '\n';
-        kill(jobs->BGround[i]->getPid(), SIGKILL);
+        if(kill(jobs->BGround[i]->getPid(), SIGKILL)!=0)
+        {
+            cout<<"quit failed";
+        }
     }
     for(int i = 0 ; i < (int)jobs->Stopped.size() ; i++){
         cout << to_string(jobs->Stopped[i]->getPid()) << ": ";
         jobs->Stopped[i]->printCmd();
-        cout << '\n';
         kill( this->jobs->Stopped[i]->getPid(), SIGKILL);
-    }*/
+    }
     kill(getpid(), SIGKILL);
+
 }
 
 void KillCommand::execute()
@@ -1046,7 +1053,10 @@ void KillCommand::execute()
         if (job)
         {
             cout << "signal number " + sigNum + " was sent to pid " + to_string(job->getPid()) << endl;
-            kill(jobs->FGround->getPid(), stoi(sigNum));
+            if(kill(job->getPid(), stoi(sigNum)) == -1)
+            {
+                perror("smash error: kill failed");
+            }
             return;
         }
         else
