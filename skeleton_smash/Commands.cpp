@@ -571,7 +571,7 @@ Command* SmallShell::BuiltIn(const char* cmd_line)
 
     else if (firstWord == "setcore")
         return new SetcoreCommand(cmd_line);
-    else if (firstWord == "getfileinfo")
+    else if (firstWord == "getfiletype")
         return new GetFileTypeCommand(cmd_line);
     else if (firstWord == "chmod")
         return new ChmodCommand(cmd_line);
@@ -823,16 +823,11 @@ void ComplexCommand::execute()
         job->FGjobID();
         SmallShell::getInstance().getJobs()->addToFG(job);
         setpgrp();
-        /*char** argv = new char* [argsCnt];
-        for(int i = 0 ; i < argsCnt ; i++)
-         {
-            char* strCopy = new char[argsTable[i].size()+1];
-            std::strcpy(strCopy,argsTable[i].c_str());
-            argv[i] = strCopy;
-         }*/
-        //execv(argsTable[0].c_str(),argv);
-        _removeBackgroundSign(_trim(cmdLine));
-        char* full_array [] = {(char*)"/bin/bash", (char*)"-c",(char*)cmdLine, nullptr};
+        char* argv = new char [COMMAND_ARGS_MAX_LENGTH];
+        strcpy(argv, cmdLine);
+        _removeBackgroundSign(_trim(argv));
+        strcpy(argv, _trim(argv).c_str());
+        char* full_array [] = {(char*)"/bin/bash",(char*)"-c",(char*)argv, nullptr};
         execv("/bin/bash", full_array);
         perror("smash error: execv failed");
         exit(errno);
@@ -913,6 +908,7 @@ void SetcoreCommand::execute()
             return;
         }
         long NumOfCores = sysconf(_SC_NPROCESSORS_ONLN);
+        cout << "num of cores: " << NumOfCores << endl;
         if (NumOfCores == -1)
         {
             perror("smash error: sysconfig failed");

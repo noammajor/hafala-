@@ -20,6 +20,8 @@
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 
+std::string _trim(const std::string& s);
+
 class Command {
 protected:
     const char* cmdLine;
