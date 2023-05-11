@@ -168,7 +168,7 @@ int numOfWords(const char* cmd_line, string* argsTable)
 
 void splitByArg(const char* line, char arg, char** result)
 {
-    string lineString = line;
+    string lineString = _trim(line);
     for (int i = 0 ; i < (int)lineString.find(arg) ; i++)
     {
         result[0] += lineString[i];
@@ -177,7 +177,7 @@ void splitByArg(const char* line, char arg, char** result)
     int j = (int)lineString.find(arg) + 1;
     if (lineString[j] == '&')
         j++;
-    for ( ; lineString[j] != 0 ; j++)
+    for ( ; j < (int)lineString.length() != 0 ; j++)
         result[1] += lineString[j];
     result[1] += 0;
 }
@@ -281,7 +281,6 @@ void JobsList::removeFinishedJobs()
             perror("smash error: waitpid failed");
         }
         if (wait_res == BGround[i-1]->getPid())
-        //if (BGround[i-1] && kill(BGround[i-1]->getPid(), 0) != 0)
         {
             delete BGround[i-1];
             BGround.erase(BGround.begin() + i - 1);
@@ -594,9 +593,17 @@ Command* SmallShell::BuiltIn(const char* cmd_line)
     return nullptr;
 }
 
-void SmallShell::add_timeout(Timeout_obj* time)
+void SmallShell::add_timeout(Timeout_obj* newTime)
 {
-    timeout.push_back(time);
+    time_t min = newTime->alarm_time;
+    for (Timeout_obj* obj : timeout)
+    {
+        if (obj->alarm_time < min)
+            min = obj->alarm_time;
+    }
+    time_t setAlarm = min - time(nullptr);
+    alarm(setAlarm);
+    timeout.push_back(newTime);
 }
 
 std::vector<Timeout_obj*> SmallShell::getAlarmed()
@@ -1163,7 +1170,7 @@ void TimeoutCommand::execute()
         number += line[i];
     number += '\0';
     int alarmTime = stoi(number);
-    alarm(alarmTime);
+    //alarm(alarmTime);
     Timeout_obj* timeout = new Timeout_obj;
     timeout->timeout_pid = commandPid;
     timeout->alarm_time = time(nullptr) + alarmTime;

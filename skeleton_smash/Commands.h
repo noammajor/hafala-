@@ -282,7 +282,7 @@ public:
     void changeName(const char* newName);
     JobsList* getJobs();
     std::vector<Timeout_obj*> getAlarmed();
-    void add_timeout(Timeout_obj* time);
+    void add_timeout(Timeout_obj* newTime);
     Command* BuiltIn(const char* cmd_line);
     bool forkExtrenal(bool setTimeout, bool runInBack, const char* cmd_line);
 };

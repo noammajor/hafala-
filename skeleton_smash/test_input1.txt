@@ -1,4 +1,6 @@
 showpid > pid.txt
-cat pid.txt
-sleep 1&
+cat pid.txt | grep smash
+showpid | grep smash
+sleep 1
+       showpid
 quit kill

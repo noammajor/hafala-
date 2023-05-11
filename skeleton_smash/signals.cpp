@@ -44,17 +44,30 @@ void alarmHandler(int sig_num) {
     cout << "smash: got an alarm" << endl;
     std::vector<Timeout_obj*> timedOut = SmallShell::getInstance().getAlarmed();
     time_t curTime = time(nullptr);
-    for (Timeout_obj* obj : timedOut)
+    for (int i = 0 ; i < (int)timedOut.size() ; i++)
     {
-        if (obj->timeout_pid < curTime)
+        if (timedOut[i]->timeout_pid < curTime)
         {
-            cout << _trim(obj->cmd_line) << " timed out!" << endl;
-            if (obj->timeout_pid)
-                if(kill(obj->timeout_pid, SIGKILL)==-1)
+            cout << _trim(timedOut[i]->cmd_line) << " timed out!" << endl;
+            if (timedOut[i]->timeout_pid)
+                if(kill(timedOut[i]->timeout_pid, SIGKILL) == -1)
                 {
                     perror("smash error: kill failed");
                 }
+            delete timedOut[i];
+            timedOut.erase(timedOut.begin() + i);
         }
+    }
+    if (!timedOut.empty())
+    {
+        time_t min = timedOut[0]->alarm_time;
+        for (Timeout_obj* obj : timedOut)
+        {
+            if (obj->alarm_time < min)
+                min = obj->alarm_time;
+        }
+        time_t setAlarm = min - time(nullptr);
+        alarm(setAlarm);
     }
 }
 
