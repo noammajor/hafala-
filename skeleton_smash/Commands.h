@@ -66,7 +66,7 @@ public:
 };
 
 class PipeCommand : public Command {
-    Command* pipeCommand;
+    Command* curCommand;
 public:
     PipeCommand(const char* cmd_line);
     ~PipeCommand() override = default;

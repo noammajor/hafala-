@@ -57,19 +57,24 @@ bool redirection(const char* cmd_line, bool setTimeout)
         int fd;
         if (append)
         {
-            fd = open(directFile.c_str(), O_APPEND|O_CREAT|O_RDWR);
+            fd = open(directFile.c_str(), O_APPEND|O_CREAT|O_RDWR, 0666);
         }
         if (!(append))
         {
-            fd = open(directFile.c_str(), O_TRUNC|O_CREAT|O_RDWR);
+            fd = open(directFile.c_str(), O_TRUNC|O_CREAT|O_RDWR, 0666);
         }
-        if (fd<0)
+        if (fd < 0)
         {
             perror("Cannot open file"); ///not defined in the project
         }
-        if(dup2(fd, STDOUT_FILENO)==-1)
+        if(dup2(fd, STDOUT_FILENO) == -1)
         {
             perror("smash error: dup2 failed");
+        }
+        if (fd > 0)
+        {
+            if (close(fd) == -1)
+                perror("smash error: close failed");
         }
         return true;
     }
@@ -169,17 +174,24 @@ int numOfWords(const char* cmd_line, string* argsTable)
 void splitByArg(const char* line, char arg, char** result)
 {
     string lineString = _trim(line);
+    string arg1, arg2;
     for (int i = 0 ; i < (int)lineString.find(arg) ; i++)
     {
-        result[0] += lineString[i];
+        arg1 += lineString[i];
     }
-    result[0] += 0;
+    arg1 += '\0';
+    char* strCopy = new char[arg1.size()+1];
+    std::strcpy(strCopy,arg1.c_str());
+    result[0]= strCopy;
     int j = (int)lineString.find(arg) + 1;
     if (lineString[j] == '&')
         j++;
-    for ( ; j < (int)lineString.length() != 0 ; j++)
-        result[1] += lineString[j];
-    result[1] += 0;
+    for ( ; j < (int)lineString.length() ; j++)
+        arg2 += lineString[j];
+    arg2 += '\0';
+    char* strCopy2 = new char[arg2.size()+1];
+    std::strcpy(strCopy2,arg2.c_str());
+    result[1]= strCopy2;
 }
 
 string findCommand(const char* cmd_line)
@@ -218,7 +230,13 @@ void Command::printComd() const
 void Command::cleanup()
 {
     if (getpid() != SmallShell::getInstance().getSmashPid())
+    {
+        if(close(1) == -1)
+        {
+            perror("smash error: close failed");
+        }
         exit(0);
+    }
 
 }
 
@@ -566,7 +584,7 @@ bool SmallShell::forkExtrenal(bool setTimeout, bool runInBack, const char* cmd_l
 Command* SmallShell::BuiltIn(const char* cmd_line)
 {
     string firstWord = _trim(cmd_line);
-    string firstWord = findCommand(firstWord);
+    firstWord = findCommand(firstWord.c_str());
     if (firstWord == "chprompt")
         return new ChpromptCommand(cmd_line);
     else if (firstWord == "showpid")
@@ -644,12 +662,8 @@ void ChpromptCommand::execute()
 
 void ShowPidCommand::execute()
 {
-    int pid = getpid();
-    if(pid == -1)
-    {
-        perror("smash error: getpid failed");
-    }
-    cout << "smash pid is "<< to_string(pid) << endl;
+    pid_t smashPid = SmallShell::getInstance().getSmashPid();
+    cout << "smash pid is "<< to_string(smashPid) << endl;
 }
 
 void GetCurrDirCommand::execute()
@@ -836,9 +850,10 @@ void SimpleCommand::execute()
     char** argv = new char* [argsCnt + 1];
     for(int i = 0 ; i < argsCnt ; i++)
     {
+        argsTable[i]= _trim(argsTable[i]);
         char* strCopy = new char[argsTable[i].size()+1];
         std::strcpy(strCopy,argsTable[i].c_str());
-        argv[i]=strCopy;
+        argv[i]= strCopy;
     }
     argv[argsCnt] = nullptr;
     execvp(argsTable[0].c_str(), argv);
@@ -884,6 +899,7 @@ void ComplexCommand::execute()
 
 PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
 {
+    curCommand= nullptr;
     string cmd_s = _trim(string(cmdLine));
     char* argTable[2];
     splitByArg(cmdLine, '|', argTable);
@@ -898,7 +914,7 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
     {
         perror("smash error: fork failed");
     }
-    if (child1 == 0)        //first command
+    else if (child1 == 0)        //first command
     {
         setpgrp();
         if (cmd_s.find("|&") != string::npos)
@@ -922,13 +938,13 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
         {
             perror("smash error: close failed");
         }
-        pipeCommand = SmallShell::getInstance().BuiltIn(argTable[0]);
-        if (!pipeCommand)
+        curCommand = SmallShell::getInstance().BuiltIn(argTable[0]);
+        if (!curCommand)
         {
             if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
-                pipeCommand = new ComplexCommand(cmd_line);
+                curCommand = new ComplexCommand(argTable[0]);
             else
-                pipeCommand = new SimpleCommand(cmd_line);
+                curCommand = new SimpleCommand(argTable[0]);
         }
         return;
     }
@@ -941,13 +957,13 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
     {
         setpgrp();
         dup2(fd[0], 0);
-        pipeCommand = SmallShell::getInstance().BuiltIn(argTable[1]);
-        if (!pipeCommand)
+        curCommand = SmallShell::getInstance().BuiltIn(argTable[1]);
+        if (!curCommand)
         {
             if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
-                pipeCommand = new ComplexCommand(cmd_line);
+                curCommand = new ComplexCommand(argTable[1]);
             else
-                pipeCommand = new SimpleCommand(cmd_line);
+                curCommand = new SimpleCommand(argTable[1]);
         }
     }
     if(close(fd[0]) == -1)
@@ -962,7 +978,8 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
 
 void PipeCommand::execute()
 {
-    pipeCommand->execute();
+    if (curCommand)
+        curCommand->execute();
 }
 
 void SetcoreCommand::execute()

@@ -1,6 +1,6 @@
+       showpid
 showpid > pid.txt
 cat pid.txt | grep smash
+pwd
 showpid | grep smash
-sleep 1
-       showpid
 quit kill
