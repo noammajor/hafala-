@@ -16,7 +16,7 @@
 #include <chrono>
 #include <fcntl.h>
 #include <sys/types.h>
-#include <signal.h>
+#include <csignal>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 

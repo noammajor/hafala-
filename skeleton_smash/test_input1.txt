@@ -1,6 +1,12 @@
-       showpid
-showpid > pid.txt
-cat pid.txt | grep smash
-pwd
-showpid | grep smash
+sleep 10&
+sleep 8&
+sleep 10&
+sleep 10&
+sleep 10&
+sleep 10&
+sleep 10&
+sleep 15&
+sleep 1&
+sleep 2&
+jobs
 quit kill

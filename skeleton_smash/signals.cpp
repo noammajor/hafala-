@@ -1,6 +1,7 @@
 #include <iostream>
 #include "signals.h"
 #include "Commands.h"
+#include <csignal>
 
 using namespace std;
 
@@ -19,11 +20,12 @@ void ctrlZHandler(int sig_num) {
     {
         SmallShell::getInstance().getJobs()->addToStopped(job);
     }
-    if(kill(job->getPid(), SIGSTOP)==-1)
+    job->changeStatus(stopped);
+    if(kill(job->getPid(), SIGSTOP) == -1)
     {
         perror("smash error: kill failed");
     }
-    cout << "smash: process " << to_string(job->getPid()) << " was stopped" ;
+    cout << "smash: process " << job->getPid() << " was stopped" ;
 }
 
 void ctrlCHandler(int sig_num) {
