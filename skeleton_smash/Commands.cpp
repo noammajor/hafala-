@@ -566,7 +566,7 @@ bool SmallShell::forkExtrenal(bool setTimeout, bool runInBack, const char* cmd_l
 
 Command* SmallShell::BuiltIn(const char* cmd_line)
 {
-    string firstWord = _rtrim(_ltrim(cmd_line));
+    string firstWord = _trim(cmd_line);
     string firstWord = findCommand(firstWord);
     if (firstWord == "chprompt")
         return new ChpromptCommand(cmd_line);
