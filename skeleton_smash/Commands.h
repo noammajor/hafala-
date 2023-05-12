@@ -163,7 +163,7 @@ public:
     std::vector<JobEntry*> Stopped;
 
 public:
-    JobsList(): FGround(nullptr), BGround(), Stopped(){}
+    JobsList(): FGround(nullptr), BGround(100, nullptr), Stopped(100, nullptr){}
     ~JobsList() = default;
     void addJob(const char* cmd_line, pid_t pid, bool isStopped = false);
     void printJobsList();

@@ -86,7 +86,7 @@ bool redirection(const char* cmd_line, bool setTimeout)
             timeoutCmd->execute();
         }
         int status;
-        if (waitpid(child, &status, WUNTRACED) < 0)
+        if (waitpid(child, &status, WNOHANG) < 0)
             perror("smash error: waitpid failed");
     }
     return false;
@@ -249,12 +249,12 @@ void JobsList::addJob(const char* cmd_line, pid_t pid, bool isStopped)
     if (isStopped)
     {
         JobEntry* job = new JobEntry(stopped, getNextJobID(), pid, cmd_line);
-        Stopped.push_back(job);
+        Stopped[job->getJobId()-1] = job;
     }
     else
     {
         JobEntry* job = new JobEntry(background, getNextJobID(), pid, cmd_line);
-        BGround.push_back(job);
+        BGround[job->getJobId()-1] = job;
     }
 }
 
@@ -262,30 +262,48 @@ void JobsList::printJobsList()
 {
     removeFinishedJobs();
     int i = 0 , j = 0;
-    for ( ; i < (int)BGround.size() && j < (int)Stopped.size() ; )
-    {
-        if (BGround[i]->getJobId() < Stopped[j]->getJobId())
-            BGround[i++]->printJob();
+    for ( ; i < (int)BGround.size() && j < (int)Stopped.size() ; ) {
+        if (!BGround[i])
+            i++;
+        else if (!Stopped[j])
+            j++;
         else
-            Stopped[j++]->printJob();
+        {
+            if (BGround[i]->getJobId() < Stopped[j]->getJobId())
+
+                BGround[i++]->printJob();
+            else
+                Stopped[j++]->printJob();
+        }
     }
-    for (; i < (int)BGround.size() ; )
-        BGround[i++]->printJob();
-    for (; j < (int)Stopped.size() ; )
-        Stopped[j++]->printJob();
+    for (; i < (int) BGround.size(); i++) {
+        if (BGround[i])
+            BGround[i]->printJob();
+    }
+    for (; j < (int) Stopped.size(); j++)
+    {
+        if(Stopped[j])
+            Stopped[j]->printJob();
+    }
 }
 
 void JobsList::killAllJobs()
 {
     for (JobEntry* job : BGround)
     {
-        if (job->getPid() != SmallShell::getInstance().getSmashPid())
-            kill(job->getPid(), SIGKILL);
+        if (job)
+        {
+            if (job->getPid() != SmallShell::getInstance().getSmashPid())
+                kill(job->getPid(), SIGKILL);
+        }
     }
     for (JobEntry* job : Stopped)
     {
-        if (job->getPid() != SmallShell::getInstance().getSmashPid())
-            kill(job->getPid(), SIGKILL);
+        if (job)
+        {
+            if (job->getPid() != SmallShell::getInstance().getSmashPid())
+                kill(job->getPid(), SIGKILL);
+        }
     }
     BGround.clear();
     Stopped.clear();
@@ -295,99 +313,70 @@ void JobsList::removeFinishedJobs()
 {
     for (int i = (int)BGround.size() ; i > 0 ; i--)
     {
-        int wait_res = waitpid(BGround[i-1]->getPid(), nullptr, WNOHANG);
-        if(wait_res==-1)
+        if (BGround[i])
         {
-            perror("smash error: waitpid failed");
-        }
-        if (wait_res == BGround[i-1]->getPid())
-        {
-            delete BGround[i-1];
-            BGround.erase(BGround.begin() + i - 1);
+            int wait_res = waitpid(BGround[i - 1]->getPid(), nullptr, WNOHANG);
+
+            if (wait_res == -1) {
+                perror("smash error: waitpid failed");
+            }
+            if (wait_res == BGround[i - 1]->getPid()) {
+                delete BGround[i - 1];
+                BGround[i - 1] = nullptr;
+            }
         }
     }
 }
 
 JobsList::JobEntry * JobsList::getJobById(int jobId)
 {
-    for (JobEntry* job : BGround)
-    {
-        if (job->getJobId() == jobId)
-            return job;
-        if (job->getJobId() > jobId)
-            break;
-    }
-    for (JobEntry* job : Stopped)
-    {
-        if (job->getJobId() == jobId)
-            return job;
-        if (job->getJobId() > jobId)
-            return nullptr;
-    }
+    if (jobId > 100 || jobId <= 0)
+        return nullptr;
+    if (BGround[jobId -1])
+        return BGround[jobId -1];
+    if (Stopped[jobId -1])
+        return BGround[jobId -1];
     return nullptr;
 }
 
 void JobsList::removeJobById(int jobId)
 {
-    for (int i = 0; i < (int)BGround.size() ; i++)
-    {
-        if (BGround[i]->getJobId() == jobId)
-        {
-            BGround.erase(BGround.begin() + i);
-            return;
-        }
-    }
-    for (int j = 0; j < (int)Stopped.size() ; j++)
-    {
-        if (Stopped[j]->getJobId() == jobId) {
-            Stopped.erase(Stopped.begin() + j);
-            return;
-        }
-    }
+
+    if (jobId > 100 || jobId <= 0)
+        return;
+    BGround[jobId - 1] = nullptr;
+    Stopped[jobId - 1] = nullptr;
 }
 
 JobsList::JobEntry * JobsList::getLastJob()
 {
-    JobEntry* maxBG = nullptr;
-    JobEntry* maxStopped = nullptr;
-    if (!BGround.empty())
-        maxBG = BGround[0];
-    if  (!Stopped.empty())
-        maxStopped = Stopped[0];
-    for (JobEntry* job : BGround)
-    {
-        if (job->getJobId() > maxBG->getJobId())
-            maxBG = job;
-    }
-    for (JobEntry* job : Stopped)
-    {
-        if (job->getJobId() > maxStopped->getJobId())
-            maxStopped = job;
-    }
-    if (!maxBG)
-        return maxStopped;
-    else if (!maxStopped)
-        return maxBG;
-    return ( maxBG->getJobId() > maxStopped->getJobId() ? maxBG : maxStopped );
+    int maxBG = 99, maxStopped = 99;
+    while (maxBG > 0 && !BGround[maxBG])
+        maxBG--;
+    while (maxStopped > 0 && !Stopped[maxStopped])
+        maxStopped--;
+    if (!BGround[maxBG])
+        return Stopped[maxStopped];
+    if (!Stopped[maxStopped])
+        return BGround[maxBG];
+    return ( maxBG > maxStopped ? BGround[maxBG] : Stopped[maxStopped] );
 }
 
 JobsList::JobEntry * JobsList::getLastStoppedJob()
 {
-    if (!Stopped.empty())
-        return Stopped.back();
-    return nullptr;
+    int maxStopped = 99;
+    while (maxStopped > 0 && !Stopped[maxStopped])
+        maxStopped--;
+    return Stopped[maxStopped];
 }
 
 int JobsList::getNextJobID ()
 {
     removeFinishedJobs();
-    int maxBG = 0;
-    int maxStopped = 0;
-    if ((int)BGround.size() > 0)
-        maxBG = BGround.back()->getJobId();
-    if((int)Stopped.size() > 0 )
-        maxStopped = Stopped.back()->getJobId();
-    return ( maxBG > maxStopped ? maxBG+1 : maxStopped+1 );
+    JobEntry* job = getLastJob();
+    if (!job)
+        return 1;
+    return job->getJobId() + 1;
 }
 
 
@@ -402,7 +391,7 @@ void JobsList::moveToBG(JobEntry* job)
 {
     removeJobById(job->getJobId());
     job->changeStatus(background);
-    BGround.push_back(job);
+    BGround[job->getJobId() - 1] = (job);
 }
 
 void JobsList::addToFG(JobEntry* job)
@@ -412,7 +401,8 @@ void JobsList::addToFG(JobEntry* job)
 
 void JobsList::addToStopped(JobEntry* job)
 {
-    Stopped.push_back(job);
+    if (job)
+        Stopped[job->getJobId()-1] = job;
 }
 
 JobsList::JobEntry* JobsList::getFGjob() const
@@ -594,7 +584,7 @@ bool SmallShell::forkExtrenal(bool setTimeout, bool runInBack, const char* cmd_l
             JobsList::JobEntry* job = new JobsList::JobEntry(forground, -1, child_pid, cmd_line);
             SmallShell::getInstance().getJobs()->addToFG(job);
             int status;
-            if(waitpid(child_pid, &status, WUNTRACED)==-1)
+            if(waitpid(child_pid, &status, WNOHANG)==-1)
             {
                 perror("smash error: waitpid failed");
             }
@@ -759,7 +749,7 @@ void ForegroundCommand::execute()
             if (job->getStat() == stopped)
                 kill(job->getPid(), SIGCONT);
             job->changeStatus(forground);
-            if(waitpid(job->getPid(), &status, WUNTRACED)==-1)
+            if(waitpid(job->getPid(), &status, WNOHANG)==-1)
             {
                 perror("smash error: waitpid failed");
             }
@@ -771,27 +761,19 @@ void ForegroundCommand::execute()
     }
     else if (argsCount == 1)
     {
-        cout<<"1"<<endl;
         JobsList::JobEntry* job = jobs->getLastJob();
-        cout<<"2"<<endl;
         if (!job)
         {
             perror("jobs list is empty");
             return;
         }
-        cput<<"3"<<endl;
         jobs->removeJobById(job->getJobId());
-        cout<<"4"<<endl;
         jobs->moveToFG(job);
-        cout<<"5"<<endl;
         cout << job->getCmdLine() << " : " << job->getPid();
-        cout<<"6"<<endl;
         if (job->getStat() == stopped)
             kill(job->getPid(), SIGCONT);
-        cout<<"7"<<end;
         job->changeStatus(forground);
-        cout<<"8"<<endl;
-        if(waitpid(job->getPid(), &status, WUNTRACED)==-1)
+        if(waitpid(job->getPid(), &status, WNOHANG)==-1)
         {
             perror("smash error: waitpid failed");
         }
@@ -1147,34 +1129,41 @@ void QuitCommand::execute()
         }
     }
     jobs->removeFinishedJobs();
-    int jobsNum = (int)jobs->BGround.size() + (int)jobs->Stopped.size();
+    int jobsNum = 0;
     cout << "sending SIGKILL signal to " << jobsNum << " jobs" << endl;
-    for(int i = 0 ; i < (int)jobs->BGround.size() ; i++){
-        cout << to_string(jobs->BGround[i]->getPid()) << ": ";
-        jobs->BGround[i]->printCmd();
-        if(kill(jobs->BGround[i]->getPid(), SIGKILL)!=0)
+    for(int i = 0 ; i < (int)jobs->BGround.size() ; i++)
+    {
+        if (jobs->BGround[i])
         {
-            perror("smash error: kill failed");
+            cout << jobs->BGround[i]->getPid() << ": ";
+            jobs->BGround[i]->printCmd();
+            if (kill(jobs->BGround[i]->getPid(), SIGKILL) != 0)
+            {
+                perror("smash error: kill failed");
+            }
         }
     }
-    for(int i = 0 ; i < (int)jobs->Stopped.size() ; i++){
-        cout << to_string(jobs->Stopped[i]->getPid()) << ": ";
-        jobs->Stopped[i]->printCmd();
-        if(kill( this->jobs->Stopped[i]->getPid(), SIGKILL)==-1)
+    for(int i = 0 ; i < (int)jobs->Stopped.size() ; i++)
+    {
+        if (jobs->Stopped[i])
         {
-            perror("smash error: kill failed");
+            cout << to_string(jobs->Stopped[i]->getPid()) << ": ";
+            jobs->Stopped[i]->printCmd();
+            if (kill(this->jobs->Stopped[i]->getPid(), SIGKILL) == -1)
+            {
+                perror("smash error: kill failed");
+            }
         }
     }
-    int pid=getpid();
-    if(pid==-1)
+    int pid = getpid();
+    if(pid == -1)
     {
         perror("smash error: getpid failed");
     }
-    if(kill(pid, SIGKILL)==-1)
+    if(kill(pid, SIGKILL)  == -1)
     {
         perror("smash error: kill failed");
     }
-
 }
 
 void KillCommand::execute()
