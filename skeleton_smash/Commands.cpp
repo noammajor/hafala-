@@ -348,14 +348,27 @@ void JobsList::removeJobById(int jobId)
 
 JobsList::JobEntry * JobsList::getLastJob()
 {
-    int maxBG = 0, maxStopped = 0;
+    JobEntry* maxBG = nullptr;
+    JobEntry* maxStopped = nullptr;
     if (!BGround.empty())
-        maxBG = BGround.back()->getJobId();
+        maxBG = BGround[0];
     if  (!Stopped.empty())
-        maxStopped = Stopped.back()->getJobId();
-    if (maxBG == 0 && maxStopped == 0)
-        return nullptr;
-    return ( maxBG > maxStopped ? BGround.back() : Stopped.back() );
+        maxStopped = Stopped[0];
+    for (JobEntry* job : BGround)
+    {
+        if (job->getJobId() > maxBG->getJobId())
+            maxBG = job;
+    }
+    for (JobEntry* job : Stopped)
+    {
+        if (job->getJobId() > maxStopped->getJobId())
+            maxStopped = job;
+    }
+    if (!maxBG)
+        return maxStopped;
+    else if (!maxStopped)
+        return maxBG;
+    return ( maxBG->getJobId() > maxStopped->getJobId() ? maxBG : maxStopped );
 }
 
 JobsList::JobEntry * JobsList::getLastStoppedJob()
@@ -742,7 +755,7 @@ void ForegroundCommand::execute()
             }
             jobs->removeJobById(job->getJobId());
             jobs->moveToFG(job);
-            cout << job->getCmdLine() << " : " << job->getPid();
+            cout << job->getCmdLine() << " : " << job->getPid() <<  endl;
             if (job->getStat() == stopped)
                 kill(job->getPid(), SIGCONT);
             job->changeStatus(forground);
