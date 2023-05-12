@@ -771,18 +771,26 @@ void ForegroundCommand::execute()
     }
     else if (argsCount == 1)
     {
+        cout<<"1"<<endl;
         JobsList::JobEntry* job = jobs->getLastJob();
+        cout<<"2"<<endl;
         if (!job)
         {
             perror("jobs list is empty");
             return;
         }
+        cput<<"3"<<endl;
         jobs->removeJobById(job->getJobId());
+        cout<<"4"<<endl;
         jobs->moveToFG(job);
+        cout<<"5"<<endl;
         cout << job->getCmdLine() << " : " << job->getPid();
+        cout<<"6"<<endl;
         if (job->getStat() == stopped)
             kill(job->getPid(), SIGCONT);
+        cout<<"7"<<end;
         job->changeStatus(forground);
+        cout<<"8"<<endl;
         if(waitpid(job->getPid(), &status, WUNTRACED)==-1)
         {
             perror("smash error: waitpid failed");
