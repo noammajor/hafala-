@@ -86,7 +86,7 @@ bool redirection(const char* cmd_line, bool setTimeout)
             timeoutCmd->execute();
         }
         int status;
-        if (waitpid(child, &status, WNOHANG) < 0)
+        if (waitpid(child, &status, WUNTRACED) < 0)
             perror("smash error: waitpid failed");
     }
     return false;
@@ -325,7 +325,7 @@ void JobsList::removeFinishedJobs()
 {
     for (int i = (int)BGround.size() ; i > 0 ; i--)
     {
-        if (BGround[i])
+        if (BGround[i-1])
         {
             int wait_res = waitpid(BGround[i - 1]->getPid(), nullptr, WNOHANG);
 
@@ -347,7 +347,7 @@ JobsList::JobEntry * JobsList::getJobById(int jobId)
     if (BGround[jobId -1])
         return BGround[jobId -1];
     if (Stopped[jobId -1])
-        return BGround[jobId -1];
+        return Stopped[jobId -1];
     return nullptr;
 }
 
@@ -595,7 +595,7 @@ bool SmallShell::forkExtrenal(bool setTimeout, bool runInBack, const char* cmd_l
             JobsList::JobEntry* job = new JobsList::JobEntry(forground, -1, child_pid, cmd_line);
             SmallShell::getInstance().getJobs()->addToFG(job);
             int status;
-            if(waitpid(child_pid, &status, WNOHANG)==-1)
+            if(waitpid(child_pid, &status, WUNTRACED)==-1)
             {
                 perror("smash error: waitpid failed");
             }
@@ -735,6 +735,7 @@ void ForegroundCommand::execute()
     string args[22];
     int argsCount = numOfWords(cmdLine, args);
     int status;
+    jobs->removeFinishedJobs();
     if (argsCount == 2)
     {
         string firstArg = args[1];
@@ -743,6 +744,7 @@ void ForegroundCommand::execute()
             int pid = stoi(firstArg);
             if (pid <= 0 )
             {
+                perror("1");
                 string error = "smash error:fg:job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
                 return;
@@ -750,6 +752,7 @@ void ForegroundCommand::execute()
             JobsList::JobEntry* job = jobs->getJobById(pid);
             if (!job)
             {
+                perror("2");
                 string error = "smash error:fg:job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
                 return;
@@ -760,7 +763,7 @@ void ForegroundCommand::execute()
             if (job->getStat() == stopped)
                 kill(job->getPid(), SIGCONT);
             job->changeStatus(forground);
-            if(waitpid(job->getPid(), &status, WNOHANG)==-1)
+            if(waitpid(job->getPid(), &status, WUNTRACED)==-1)
             {
                 perror("smash error: waitpid failed");
             }
@@ -780,11 +783,11 @@ void ForegroundCommand::execute()
         }
         jobs->removeJobById(job->getJobId());
         jobs->moveToFG(job);
-        cout << job->getCmdLine() << " : " << job->getPid();
+        cout << job->getCmdLine() << " : " << job->getPid() << endl;
         if (job->getStat() == stopped)
             kill(job->getPid(), SIGCONT);
         job->changeStatus(forground);
-        if(waitpid(job->getPid(), &status, WNOHANG)==-1)
+        if(waitpid(job->getPid(), &status, WUNTRACED)==-1)
         {
             perror("smash error: waitpid failed");
         }
@@ -799,6 +802,7 @@ void BackgroundCommand::execute()
 {
     string args[22];
     int argsCount = numOfWords(cmdLine, args);
+    jobs->removeFinishedJobs();
     if (argsCount == 2)
     {
         string firstArg = args[1];
@@ -825,7 +829,7 @@ void BackgroundCommand::execute()
                 return;
             }
             jobs->moveToBG(job);
-            job->printJob();
+            cout << job->getCmdLine() << " : " << job->getPid() << endl;
             if(kill(pid, SIGCONT)==-1)
             {
                 perror("smash error: kill failed");
@@ -845,7 +849,7 @@ void BackgroundCommand::execute()
             return;
         }
         jobs->moveToBG(job);
-        job->printJob();
+        cout << job->getCmdLine() << " : " << job->getPid() << endl;
         if(kill(job->getPid(), SIGCONT)==-1)
         {
             perror("smash error: kill failed");
@@ -1140,7 +1144,7 @@ void QuitCommand::execute()
         }
     }
     jobs->removeFinishedJobs();
-    int jobsNum = 0;
+    int jobsNum = jobs->countJobs();
     cout << "sending SIGKILL signal to " << jobsNum << " jobs" << endl;
     for(int i = 0 ; i < (int)jobs->BGround.size() ; i++)
     {
@@ -1153,10 +1157,7 @@ void QuitCommand::execute()
                 perror("smash error: kill failed");
             }
         }
-    }
-    for(int i = 0 ; i < (int)jobs->Stopped.size() ; i++)
-    {
-        if (jobs->Stopped[i])
+        else if (jobs->Stopped[i])
         {
             cout << to_string(jobs->Stopped[i]->getPid()) << ": ";
             jobs->Stopped[i]->printCmd();
@@ -1179,6 +1180,7 @@ void QuitCommand::execute()
 
 void KillCommand::execute()
 {
+    SmallShell::getInstance().getJobs()->removeFinishedJobs();
     std::string arg[22];
     if(numOfWords(cmdLine,arg)!=3 || arg[1].length()>3 || arg[1].length()==1)
     {
