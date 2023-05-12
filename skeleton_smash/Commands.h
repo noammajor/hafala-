@@ -179,6 +179,7 @@ public:
     void addToFG(JobEntry* job);
     void addToStopped(JobEntry* job);
     JobEntry* getFGjob() const;
+    int countJobs() const;
   // TODO: Add extra methods or modify existing ones as needed
 };
 

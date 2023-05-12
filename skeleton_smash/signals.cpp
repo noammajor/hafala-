@@ -25,7 +25,7 @@ void ctrlZHandler(int sig_num) {
     {
         perror("smash error: kill failed");
     }
-    cout << "smash: process " << job->getPid() << " was stopped" ;
+    cout << "smash: process " << job->getPid() << " was stopped"<<endl ;
 }
 
 void ctrlCHandler(int sig_num) {
@@ -38,7 +38,7 @@ void ctrlCHandler(int sig_num) {
     {
         perror("smash error: kill failed");
     }
-    cout << "smash: process " << to_string(job->getPid()) << " was killed" ;
+    cout << "smash: process " << to_string(job->getPid()) << " was killed" <<endl;
     delete job;
 }
 

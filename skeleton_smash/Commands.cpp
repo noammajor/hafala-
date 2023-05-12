@@ -243,7 +243,18 @@ void Command::cleanup()
 
 /////////////////////////////////////////////////  Jobs   ///////////////////////////////////////////////////////////
 
-
+int JobsList::countJobs() const
+{
+    int counter=0;
+    for(int i=0;i<100;i++)
+    {
+        if(BGround[i])
+            counter++;
+        if(Stopped[i])
+            counter++;
+    }
+    return counter;
+}
 void JobsList::addJob(const char* cmd_line, pid_t pid, bool isStopped)
 {
     if (isStopped)
@@ -775,7 +786,7 @@ void ForegroundCommand::execute()
         cout<<"6"<<endl;
         if (job->getStat() == stopped)
             kill(job->getPid(), SIGCONT);
-        cout<<"7"<<end;
+        cout<<"7"<<endl;
         job->changeStatus(forground);
         cout<<"8"<<endl;
         if(waitpid(job->getPid(), &status, WUNTRACED)==-1)
@@ -901,7 +912,7 @@ void ComplexCommand::execute()
         int pid= getpid();
         if(pid == -1)
         {
-            perror("smash error: waitpid failed");
+            perror("smash error: getpid failed");
         }
         JobsList::JobEntry* job = new JobsList::JobEntry(forground, jobID, pid, cmdLine);
         job->FGjobID();
