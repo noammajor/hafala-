@@ -243,6 +243,18 @@ void Command::cleanup()
 
 /////////////////////////////////////////////////  Jobs   ///////////////////////////////////////////////////////////
 
+int JobsList::countJobs() const
+{
+    int counter=0;
+    for(int i=0;i<100;i++)
+    {
+        if(BGround[i])
+            counter++;
+        if(Stopped[i])
+            counter++;
+    }
+    return counter;
+}
 
 void JobsList::addJob(const char* cmd_line, pid_t pid, bool isStopped)
 {
@@ -341,7 +353,6 @@ JobsList::JobEntry * JobsList::getJobById(int jobId)
 
 void JobsList::removeJobById(int jobId)
 {
-
     if (jobId > 100 || jobId <= 0)
         return;
     BGround[jobId - 1] = nullptr;
@@ -896,7 +907,7 @@ void ComplexCommand::execute()
         int pid= getpid();
         if(pid == -1)
         {
-            perror("smash error: waitpid failed");
+            perror("smash error: getpid failed");
         }
         JobsList::JobEntry* job = new JobsList::JobEntry(forground, jobID, pid, cmdLine);
         job->FGjobID();
