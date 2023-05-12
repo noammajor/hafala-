@@ -11,6 +11,8 @@ void ctrlZHandler(int sig_num) {
     if (!job)
         return;
     SmallShell::getInstance().getJobs()->addToFG(nullptr);
+    /*if (kill(job->getPid(), 0) == -1)
+        return;*/
     if (waitpid(job->getPid(), nullptr, WNOHANG) == job->getPid())
     {
         return;
