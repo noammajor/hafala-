@@ -243,6 +243,15 @@ void Command::cleanup()
 
 /////////////////////////////////////////////////  Jobs   ///////////////////////////////////////////////////////////
 
+void JobsList::FGtoSTP(JobsList::JobEntry* job)
+{
+    if (!job)
+        return;
+    int jobID = getNextJobID();
+    job->setID(jobID);
+    addToStopped(job);
+}
+
 int JobsList::countJobs() const
 {
     int counter=0;
@@ -273,29 +282,12 @@ void JobsList::addJob(const char* cmd_line, pid_t pid, bool isStopped)
 void JobsList::printJobsList()
 {
     removeFinishedJobs();
-    int i = 0 , j = 0;
-    for ( ; i < (int)BGround.size() && j < (int)Stopped.size() ; ) {
-        if (!BGround[i])
-            i++;
-        else if (!Stopped[j])
-            j++;
-        else
-        {
-            if (BGround[i]->getJobId() < Stopped[j]->getJobId())
-
-                BGround[i++]->printJob();
-            else
-                Stopped[j++]->printJob();
-        }
-    }
-    for (; i < (int) BGround.size(); i++) {
+    for(int i = 0 ; i < (int)BGround.size() ; i++)
+    {
         if (BGround[i])
             BGround[i]->printJob();
-    }
-    for (; j < (int) Stopped.size(); j++)
-    {
-        if(Stopped[j])
-            Stopped[j]->printJob();
+        else if (Stopped[i])
+            Stopped[i]->printJob();
     }
 }
 
@@ -394,15 +386,18 @@ int JobsList::getNextJobID ()
 void JobsList::moveToFG(JobEntry* job)
 {
     FGround = job;
-    job->changeStatus(forground);
+    if (job)
+        job->changeStatus(forground);
 }
 
 
 void JobsList::moveToBG(JobEntry* job)
 {
+    if (!job)
+        return;
     removeJobById(job->getJobId());
     job->changeStatus(background);
-    BGround[job->getJobId() - 1] = (job);
+    BGround[job->getJobId() - 1] = job;
 }
 
 void JobsList::addToFG(JobEntry* job)
@@ -413,7 +408,12 @@ void JobsList::addToFG(JobEntry* job)
 void JobsList::addToStopped(JobEntry* job)
 {
     if (job)
+    {
+        if (job->getJobId() == -1)
+            job->setID(getNextJobID());
         Stopped[job->getJobId()-1] = job;
+        job->changeStatus(stopped);
+    }
 }
 
 JobsList::JobEntry* JobsList::getFGjob() const
@@ -431,6 +431,11 @@ time_t JobsList::JobEntry::getCurrentTime()
 int JobsList::JobEntry::getJobId()
 {
     return Job_ID;
+}
+
+void JobsList::JobEntry::setID(int jobID)
+{
+    Job_ID = jobID;
 }
 
 void JobsList::JobEntry::changeStatus(status curr)
@@ -949,7 +954,8 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
     }
     else if (child1 == 0)        //first command
     {
-        setpgrp();
+        if (setpgrp() == -1)
+            perror("smash error: setpgrp failed");
         if (cmd_s.find("|&") != string::npos)
         {
             if (dup2(fd[1], 2) == -1) {

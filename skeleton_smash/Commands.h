@@ -138,17 +138,18 @@ enum status {forground, background, stopped};
 class JobsList {
 public:
     class JobEntry{
-    private:
+    public:
         time_t begin;
         status currentStatus;
         int Job_ID;
         pid_t pid;
         const char* cmdLine;
-    public:
+
         JobEntry(status starting, int id, pid_t pid, const char* cmd_line) : begin(time(NULL)), currentStatus(starting), Job_ID(id), pid(pid), cmdLine(cmd_line){}
         ~JobEntry() = default;
         time_t getCurrentTime();
         int getJobId();
+        void  setID(int jobID);
         void changeStatus(status curr);
         status getStat();
         void printJob();
@@ -162,7 +163,7 @@ public:
     std::vector<JobEntry*> BGround;
     std::vector<JobEntry*> Stopped;
 
-public:
+
     JobsList(): FGround(nullptr), BGround(100, nullptr), Stopped(100, nullptr){}
     ~JobsList() = default;
     void addJob(const char* cmd_line, pid_t pid, bool isStopped = false);
@@ -180,6 +181,7 @@ public:
     void addToStopped(JobEntry* job);
     JobEntry* getFGjob() const;
     int countJobs() const;
+    void  FGtoSTP(JobsList::JobEntry* job);
   // TODO: Add extra methods or modify existing ones as needed
 };
 
@@ -217,7 +219,7 @@ public:
 
 ///////////////////////////////////////////////  SpecialCommands   ///////////////////////////////////////////////////////////
 
-class ChmodCommand : public BuiltInCommand {;
+class ChmodCommand : public BuiltInCommand {
 public:
     explicit ChmodCommand(const char* cmd_line): BuiltInCommand(cmd_line) {}
     virtual ~ChmodCommand() {}
@@ -250,7 +252,7 @@ struct Timeout_obj
 
 
 class SmallShell {
-private:
+public:
     std::string namePrompt;
     pid_t smashPid;
     const char* curCD;
@@ -259,7 +261,7 @@ private:
 
 
     SmallShell(): namePrompt("smash"), smashPid(getpid()), curCD(nullptr), jobsList(new JobsList), timeout(){}
-public:
+
     static SmallShell* instance; // Guaranteed to be destroyed.
 
     Command *CreateCommand(const char* cmd_line);
