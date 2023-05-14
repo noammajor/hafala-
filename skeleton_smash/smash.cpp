@@ -3,9 +3,9 @@
 #include <iostream>
 #include <unistd.h>
 #include <sys/wait.h>
-#include "Commands.h"
 #include "signals.h"
 #include <csignal>
+#include "Commands.h"
 
 int main(int argc, char* argv[]) {
     if(signal(SIGTSTP , ctrlZHandler)==SIG_ERR) {
