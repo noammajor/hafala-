@@ -73,15 +73,6 @@ public:
     void execute() override;
 };
 
-class RedirectionCommand : public Command {
-public:
-    explicit RedirectionCommand(const char* cmd_line): Command(cmd_line){}
-    ~RedirectionCommand() override = default;
-    void execute() override;
-    //void prepare() override;
-    //void cleanup() override;
-};
-
 ///////////////////////////////////////////////  BuiltInCommands   ///////////////////////////////////////////////////////////
 
 class ChpromptCommand: public BuiltInCommand {
@@ -175,7 +166,6 @@ public:
     JobEntry * getLastJob();
     JobEntry *getLastStoppedJob();
     int getNextJobID ();
-    void moveToFG(JobEntry* job);
     void moveToBG(JobEntry* job);
     void addToFG(JobEntry* job);
     void addToStopped(JobEntry* job);

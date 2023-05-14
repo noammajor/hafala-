@@ -86,9 +86,8 @@ bool redirection(const char* cmd_line, bool setTimeout)
             timeoutCmd->execute();
         }
         int status;
-        waitpid(child, &status, WUNTRACED);
-        /*if (waitpid(child, &status, WUNTRACED) < 0)
-            perror("smash error: waitpid failed");*/
+        if (waitpid(child, &status, WUNTRACED) < 0)
+            perror("smash error: waitpid failed");
     }
     return false;
 }
@@ -384,14 +383,6 @@ int JobsList::getNextJobID ()
 }
 
 
-void JobsList::moveToFG(JobEntry* job)
-{
-    FGround = job;
-    if (job)
-        job->changeStatus(forground);
-}
-
-
 void JobsList::moveToBG(JobEntry* job)
 {
     if (!job)
@@ -601,11 +592,10 @@ bool SmallShell::forkExtrenal(bool setTimeout, bool runInBack, const char* cmd_l
             JobsList::JobEntry* job = new JobsList::JobEntry(forground, -1, child_pid, cmd_line);
             SmallShell::getInstance().getJobs()->addToFG(job);
             int status;
-            waitpid(child_pid, &status, WUNTRACED);
-            /*if(waitpid(child_pid, &status, WUNTRACED)==-1)
+            if(waitpid(child_pid, &status, WUNTRACED)==-1)
             {
                 perror("smash error: waitpid failed");
-            }*/
+            }
         }
     }
     return false;
@@ -1094,39 +1084,38 @@ void GetFileTypeCommand::execute()
     stat(argTable[1].c_str(),&stat_buf);
      output = argTable[1] + "\'s" + " type is ";
      if(S_ISREG(stat_buf.st_mode))
-            {
-                output= output + "\"regular file\"";
-            }
+     {
+         output = output + "\"regular file\"";
+     }
      else if (S_ISDIR(stat_buf.st_mode))
-            {
-                output = output + "\"directory file\"";
-            }
+     {
+         output = output + "\"directory file\"";
+     }
      else if (S_ISLNK(stat_buf.st_mode))
-            {
-                output= output + "\"symbolic link file\"";
-            }
+     {
+         output = output + "\"symbolic link file\"";
+     }
      else if(S_ISBLK(stat_buf.st_mode))
-            {
-                output= output + "\"block file\"";
-            }
+     {
+         output = output + "\"block file\"";
+     }
      else if (S_ISCHR(stat_buf.st_mode))
-            {
-                output= output + "\"character file\"";
-            }
+     {
+         output = output + "\"character file\"";
+     }
      else if (S_ISFIFO(stat_buf.st_mode))
-            {
-                output= output + "\"FIFO file\"";
-            }
+     {
+         output = output + "\"FIFO file\"";
+     }
      else if(S_ISSOCK(stat_buf.st_mode))
-            {
-                output= output + "\"socket file\"";
-            }
-
-        ifstream in_file(argTable[1],ios::binary);
-        in_file.seekg(0,ios::end);
-        int fileSize=in_file.tellg();
-        output = output + " and takes up " + to_string(fileSize) + " bytes";
-        cout << output << endl;
+     {
+         output = output + "\"socket file\"";
+     }
+     ifstream in_file(argTable[1],ios::binary);
+     in_file.seekg(0,ios::end);
+     int fileSize=in_file.tellg();
+     output = output + " and takes up " + to_string(fileSize) + " bytes";
+     cout << output << endl;
 }
 
 void ChmodCommand::execute()
