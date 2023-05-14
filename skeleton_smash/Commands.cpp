@@ -650,7 +650,8 @@ std::vector<Timeout_obj*> SmallShell::getAlarmed()
     return timeout;
 }
 
-void SmallShell::executeCommand(const char *cmd_line) {
+void SmallShell::executeCommand(const char *cmd_line)
+{
     char* cmd = new char[strlen(cmd_line)] ;
     strcpy(cmd, cmd_line);
     const char* cmdLine = cmd;
@@ -704,6 +705,8 @@ void ChangeDirCommand::execute()
     }
     else if(args[1] == "-")
     {
+        char cwd[1024];
+        getcwd(cwd, 1024);
         if (!SmallShell::getInstance().getCD())
         {
             perror("smash error: cd: OLDPWD not set");
@@ -714,17 +717,19 @@ void ChangeDirCommand::execute()
             perror("smash error: chdir failed");
             return;
         }
+        SmallShell::getInstance().addCD(cwd);
+        return;
     }
     else
     {
+        char cwd[1024];
+        SmallShell::getInstance().addCD(getcwd(cwd, 1024));
         if (chdir(args[1].c_str()) != 0)
         {
             perror("smash error: chdir failed");
             return;
         }
     }
-    char cwd[1024];
-    SmallShell::getInstance().addCD(getcwd(cwd, 1024));
 }
 
 void ForegroundCommand::execute()
@@ -741,7 +746,6 @@ void ForegroundCommand::execute()
             int pid = stoi(firstArg);
             if (pid <= 0 )
             {
-                perror("1");
                 string error = "smash error:fg:job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
                 return;
@@ -749,7 +753,6 @@ void ForegroundCommand::execute()
             JobsList::JobEntry* job = jobs->getJobById(pid);
             if (!job)
             {
-                perror("2");
                 string error = "smash error:fg:job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
                 return;
@@ -764,7 +767,10 @@ void ForegroundCommand::execute()
             pid_t jobPid = job->getPid();
             if(waitpid(jobPid, &status, WUNTRACED)==-1)
             {
-                perror("smash error: waitpid failed");
+                if (errno != ECHILD)
+                {
+                    perror("smash error: waitpid failed");
+                }
             }
         }
         catch (exception &e)
@@ -871,8 +877,20 @@ void JobsCommand::execute()
 
 void SimpleCommand::execute()
 {
+    bool redirectionhapped=false;
     std::string argsTable[22];
     int argsCnt = numOfWords(cmdLine, argsTable);
+    std::string findingRedirection = cmdLine;
+    if(findingRedirection.find(">")!=string::npos)
+    {
+        char* used= new char*[argsCnt];
+        splitByArg(cmdLine, '|', used);
+        redirectionhapped=true;
+        for(int i=0;i<argsCnt;i++)
+        {
+            argsTable[i]=used[i];
+        }
+    }
     bool exists = _isBackgroundComamnd(cmdLine);
     if (exists)
     {
@@ -881,6 +899,7 @@ void SimpleCommand::execute()
         else
             argsTable[argsCnt-1] = '\0';
     }
+
     char** argv = new char* [argsCnt + 1];
     for(int i = 0 ; i < argsCnt ; i++)
     {
@@ -889,7 +908,14 @@ void SimpleCommand::execute()
         std::strcpy(strCopy,argsTable[i].c_str());
         argv[i]= strCopy;
     }
-    argv[argsCnt] = nullptr;
+    if(redirectionhapped)
+    {
+        argv[argsCnt-1] = nullptr;
+    }
+    else
+    {
+        argv[argsCnt] = nullptr;
+    }
     execvp(argsTable[0].c_str(), argv);
     perror("smash error: execvp failed");
     exit(errno);
@@ -1224,7 +1250,9 @@ void TimeoutCommand::execute()
     }
     string number;
     for ( ; i < (int)line.length() && isdigit(line[i]) ; i++)
+    {
         number += line[i];
+    }
     number += '\0';
     int alarmTime = stoi(number);
     //alarm(alarmTime);
