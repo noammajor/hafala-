@@ -769,13 +769,13 @@ void ForegroundCommand::execute()
             cout << job->getCmdLine() << " : " << job->getPid() <<  endl;
             if (job->getStat() == stopped)
                 kill(job->getPid(), SIGCONT);
+            job->begin = time(NULL);
             job->changeStatus(forground);
             pid_t jobPid = job->getPid();
-            waitpid(jobPid, &status, WUNTRACED);
-            /*if(waitpid(jobPid, &status, WUNTRACED)==-1)
+            if(waitpid(jobPid, &status, WUNTRACED)==-1)
             {
                 perror("smash error: waitpid failed");
-            }*/
+            }
         }
         catch (exception &e)
         {
@@ -796,12 +796,12 @@ void ForegroundCommand::execute()
         pid_t jobPid = job->getPid();
         if (job->getStat() == stopped)
             kill(jobPid, SIGCONT);
+        job->begin = time(NULL);
         job->changeStatus(forground);
-        waitpid(jobPid, &status, WUNTRACED);
-        /*if(waitpid(jobPid, &status, WUNTRACED)==-1)
+        if(waitpid(jobPid, &status, WUNTRACED)==-1)
         {
             perror("smash error: waitpid failed");
-        }*/
+        }
     }
     else
     {

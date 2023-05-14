@@ -8,22 +8,11 @@ using namespace std;
 void ctrlZHandler(int sig_num) {
     cout << "smash: got ctrl-Z" << endl;
     JobsList::JobEntry* job = SmallShell::getInstance().getJobs()->getFGjob();
-    //JobsList::JobEntry* job = nullptr;
-    for (JobsList::JobEntry* jobptr : SmallShell::getInstance().getJobs()->BGround)
-    {
-        if ( jobptr && jobptr->currentStatus == forground)
-            job = jobptr;
-    }
-    for (JobsList::JobEntry* jobptr : SmallShell::getInstance().getJobs()->Stopped)
-    {
-        if (jobptr && jobptr->currentStatus == forground)
-            job = jobptr;
-    }
     if (!job)
         return;
     if (job->currentStatus != forground)
         return;
-    if (waitpid(job->getPid(), nullptr, WNOHANG) == job->getPid())
+    if (waitpid(job->getPid(), nullptr, WNOHANG) != 0)
     {
         return;
     }
@@ -35,15 +24,13 @@ void ctrlZHandler(int sig_num) {
     else
     {
         SmallShell::getInstance().jobsList->FGround = nullptr;
-        //cout << job->cmdLine << endl;
         SmallShell::getInstance().getJobs()->addToStopped(job);
     }
     job->changeStatus(stopped);
-    kill(job->getPid(), SIGSTOP);
-    /*if(kill(job->getPid(), SIGSTOP) == -1)
+    if(kill(job->getPid(), SIGSTOP) == -1)
     {
         perror("smash error: kill failed");
-    }*/
+    }
     SmallShell::getInstance().getJobs()->addToFG(nullptr);
     cout << "smash: process " << job->getPid() << " was stopped" << endl;
 }
