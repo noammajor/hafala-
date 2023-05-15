@@ -23,7 +23,7 @@ SmallShell* SmallShell::instance = nullptr;
 
 ///////////////////////////////////////////////  General Functions   ///////////////////////////////////////////////////////////
 
-std::string fileNameOpen(char* cmd_line)
+std::string fileNameOpen(const char* cmd_line)
 {
     std::string fileName = cmd_line;
     if(fileName.find(">>") < fileName.length())
@@ -36,7 +36,7 @@ std::string fileNameOpen(char* cmd_line)
     }
 }
 
-bool redirection(char* cmd_line, bool setTimeout)
+bool redirection(const char* cmd_line, bool setTimeout)
 {
     string line = cmd_line;
     bool append = false;
@@ -129,11 +129,10 @@ bool _isBackgroundComamnd(const char* cmd_line)
     return str[str.find_last_not_of(WHITESPACE)] == '&';
 }
 
-void _removeBackgroundSign(char* cmd_line)
+void _removeBackgroundSign(string cmd_line)
 {
-    string str(cmd_line);
     // find last character other than spaces
-    unsigned int idx = str.find_last_not_of(WHITESPACE);
+    unsigned int idx = cmd_line.find_last_not_of(WHITESPACE);
     // if all characters are spaces then return
     if (idx == (unsigned int)string::npos)
     {
@@ -146,21 +145,16 @@ void _removeBackgroundSign(char* cmd_line)
     // replace the & (background sign) with space and then remove all tailing spaces.
     cmd_line[idx] = ' ';
     // truncate the command line string up to the last non-space character
-    cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = '\0';
-    cout << cmd_line << "after" << endl;
+    cmd_line[cmd_line.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
-int numOfWords(char* cmd_line, string* argsTable)
+int numOfWords(const char* cmd_line, string* argsTable)
 {
-    char* temp=cmd_line;
-    _removeBackgroundSign(temp);
-    std::string line = _trim(cmd_line);
-    //line = _trim(line);
+    string line = _trim(cmd_line);
     int count = 1;
     string cur;
     cur += line[0];
     int index = 0;
-    cout << line << "end" << endl;
     for(int i = 1 ; i < (int)line.length() ; i++)
     {
         if(line[i-1] != ' ' && line[i] == ' ')
@@ -177,7 +171,7 @@ int numOfWords(char* cmd_line, string* argsTable)
     return count;
 }
 
-void splitByArg(char* line, char arg, char** result)
+void splitByArg(const char* line, char arg, char** result)
 {
     string lineString = _trim(line);
     string arg1, arg2;
@@ -200,9 +194,9 @@ void splitByArg(char* line, char arg, char** result)
     result[1]= strCopy2;
 }
 
-string findCommand(char* cmd_line)
+string findCommand(const char* cmd_line)
 {
-    string line = _trim(cmd_line);
+    string line = cmd_line;
     string command = "";
     string timeout = "timeout";
     int i = 0;
@@ -336,12 +330,11 @@ void JobsList::removeFinishedJobs()
         if (BGround[i-1])
         {
             int wait_res = waitpid(BGround[i - 1]->getPid(), nullptr, WNOHANG);
-            //cout << "pid : " << BGround[i - 1]->getPid() << endl;
+
             if (wait_res == -1) {
                 perror("smash error: waitpid failed");
             }
             if (wait_res == BGround[i - 1]->getPid()) {
-                //cout << wait_res << " delete job" << endl;
                 delete BGround[i - 1];
                 BGround[i - 1] = nullptr;
             }
@@ -475,7 +468,7 @@ pid_t JobsList::JobEntry::getPid() const
     return pid;
 }
 
-char* JobsList::JobEntry::getCmdLine()
+const char* JobsList::JobEntry::getCmdLine()
 {
     return cmdLine;
 }
@@ -493,7 +486,7 @@ SmallShell::~SmallShell()
     jobsList->killAllJobs();
 }
 
-void SmallShell::changeName(string newName)
+void SmallShell::changeName(const char* newName)
 {
     namePrompt = newName;
 }
@@ -503,7 +496,7 @@ pid_t SmallShell::getSmashPid() const
     return smashPid;
 }
 
-void SmallShell::addCD(char* dir)
+void SmallShell::addCD(const char* dir)
 {
     curCD = dir;
 }
@@ -526,17 +519,13 @@ JobsList* SmallShell::getJobs()
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
-Command* SmallShell::CreateCommand(char* cmd_line)
+Command* SmallShell::CreateCommand(const char* cmd_line)
 {
-    char * temp=cmd_line;
-    _removeBackgroundSign(temp);
-    string cmd_s = _trim(string(temp));
+    string cmd_s = _trim(string(cmd_line));
     bool runInBack = false;
     if (_isBackgroundComamnd(cmd_line))
-    {
-        cout << "run " << endl;
         runInBack = true;
-    }
+    _removeBackgroundSign(cmd_s);
     bool isChild  = false;
     bool redirectionHappened = false;
     Command* cmd = nullptr;
@@ -582,7 +571,7 @@ Command* SmallShell::CreateCommand(char* cmd_line)
     return cmd;
 }
 
-bool SmallShell::forkExtrenal(bool setTimeout, bool runInBack, char* cmd_line)
+bool SmallShell::forkExtrenal(bool setTimeout, bool runInBack, const char* cmd_line)
 {
     pid_t child_pid = fork();
     if(child_pid < 0)
@@ -622,10 +611,10 @@ bool SmallShell::forkExtrenal(bool setTimeout, bool runInBack, char* cmd_line)
     return false;
 }
 
-Command* SmallShell::BuiltIn(char* cmd_line)
+Command* SmallShell::BuiltIn(const char* cmd_line)
 {
     string firstWord = _trim(cmd_line);
-    firstWord = findCommand(cmd_line);
+    firstWord = findCommand(firstWord.c_str());
     if (firstWord == "chprompt")
         return new ChpromptCommand(cmd_line);
     else if (firstWord == "showpid")
@@ -671,10 +660,11 @@ std::vector<Timeout_obj*> SmallShell::getAlarmed()
     return timeout;
 }
 
-void SmallShell::executeCommand(char *cmd_line) {
+void SmallShell::executeCommand(const char *cmd_line)
+{
     char* cmd = new char[strlen(cmd_line)] ;
     strcpy(cmd, cmd_line);
-    char* cmdLine = cmd;
+    const char* cmdLine = cmd;
     Command* command = CreateCommand(cmdLine);
     if(command == nullptr)
     {
@@ -697,7 +687,7 @@ void ChpromptCommand::execute()
     }
     else
     {
-        SmallShell::getInstance().changeName(args[1]);
+        SmallShell::getInstance().changeName(args[1].c_str());
     }
 }
 
@@ -725,6 +715,8 @@ void ChangeDirCommand::execute()
     }
     else if(args[1] == "-")
     {
+        char cwd[1024];
+        getcwd(cwd, 1024);
         if (!SmallShell::getInstance().getCD())
         {
             perror("smash error: cd: OLDPWD not set");
@@ -735,17 +727,19 @@ void ChangeDirCommand::execute()
             perror("smash error: chdir failed");
             return;
         }
+        SmallShell::getInstance().addCD(cwd);
+        return;
     }
     else
     {
+        char cwd[1024];
+        SmallShell::getInstance().addCD(getcwd(cwd, 1024));
         if (chdir(args[1].c_str()) != 0)
         {
             perror("smash error: chdir failed");
             return;
         }
     }
-    char cwd[1024];
-    SmallShell::getInstance().addCD(getcwd(cwd, 1024));
 }
 
 void ForegroundCommand::execute()
@@ -770,6 +764,7 @@ void ForegroundCommand::execute()
             if (!job)
             {
                 string error = "smash error: fg: job-id " + to_string(pid) + " does not exist";
+                string error = "smash error: fg: job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
                 return;
             }
@@ -783,7 +778,10 @@ void ForegroundCommand::execute()
             pid_t jobPid = job->getPid();
             if(waitpid(jobPid, &status, WUNTRACED)==-1)
             {
-                perror("smash error: waitpid failed");
+                if (errno != ECHILD)
+                {
+                    perror("smash error: waitpid failed");
+                }
             }
         }
         catch (exception &e)
@@ -890,10 +888,21 @@ void JobsCommand::execute()
 
 void SimpleCommand::execute()
 {
+    bool redirectionhapped = false;
     std::string argsTable[22];
     int argsCnt = numOfWords(cmdLine, argsTable);
+    std::string findingRedirection = cmdLine;
+    if(findingRedirection.find(">")!=string::npos)
+    {
+        char* used= new char*[argsCnt];
+        splitByArg(cmdLine, '|', used);
+        redirectionhapped=true;
+        for(int i=0;i<argsCnt;i++)
+        {
+            argsTable[i]=used[i];
+        }
+    }
     bool exists = _isBackgroundComamnd(cmdLine);
-    argsTable[argsCnt-1] = _trim(argsTable[argsCnt-1]);
     if (exists)
     {
         if (argsTable[argsCnt-1] != "&")
@@ -901,6 +910,7 @@ void SimpleCommand::execute()
         else
             argsTable[argsCnt-1] = '\0';
     }
+
     char** argv = new char* [argsCnt + 1];
     for(int i = 0 ; i < argsCnt ; i++)
     {
@@ -910,7 +920,14 @@ void SimpleCommand::execute()
         cout << strCopy << "     " << i << endl;
         argv[i] = strCopy;
     }
-    argv[argsCnt] = nullptr;
+    if(redirectionhapped)
+    {
+        argv[argsCnt-1] = nullptr;
+    }
+    else
+    {
+        argv[argsCnt] = nullptr;
+    }
     execvp(argsTable[0].c_str(), argv);
     perror("smash error: execvp failed");
     exit(errno);
@@ -952,7 +969,7 @@ void ComplexCommand::execute()
         exit(errno);
 }
 
-PipeCommand::PipeCommand(char* cmd_line): Command(cmd_line)
+PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
 {
     curCommand= nullptr;
     string cmd_s = _trim(string(cmdLine));
@@ -1082,7 +1099,7 @@ void SetcoreCommand::execute()
     }
 }
 
-bool is_file_exist(char *fileName)
+bool is_file_exist(const char *fileName)
 {
     std::ifstream infile(fileName);
     return infile.good();
@@ -1261,7 +1278,9 @@ void TimeoutCommand::execute()
     }
     string number;
     for ( ; i < (int)line.length() && isdigit(line[i]) ; i++)
+    {
         number += line[i];
+    }
     number += '\0';
     int alarmTime = stoi(number);
     //alarm(alarmTime);

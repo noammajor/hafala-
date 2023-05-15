@@ -62,7 +62,7 @@ void alarmHandler(int sig_num) {
     {
         if (timedOut[i]->timeout_pid < curTime)
         {
-            cout << _trim(timedOut[i]->cmd_line) << " timed out!" << endl;
+            cout <<"smash: "<<_trim(timedOut[i]->cmd_line) << " timed out!" << endl;
             if (timedOut[i]->timeout_pid)
                 if(kill(timedOut[i]->timeout_pid, SIGKILL) == -1)
                 {
