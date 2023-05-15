@@ -129,27 +129,10 @@ bool _isBackgroundComamnd(const char* cmd_line)
     return str[str.find_last_not_of(WHITESPACE)] == '&';
 }
 
-/*void _removeBackgroundSign(string cmd_line)
-{
-    // find last character other than spaces
-    unsigned int idx = cmd_line.find_last_not_of(WHITESPACE);
-    // if all characters are spaces then return
-    if (idx == (unsigned int)string::npos)
-    {
-        return;
-    }
-    // if the command line does not end with & then return
-    if (cmd_line[idx] != '&') {
-        return;
-    }
-    // replace the & (background sign) with space and then remove all tailing spaces.
-    cmd_line[idx] = ' ';
-    // truncate the command line string up to the last non-space character
-    cmd_line[cmd_line.find_last_not_of(WHITESPACE, idx) + 1] = 0;
-}*/
-
 void _removeBackgroundSign(char* cmd_line)
 {
+    if (!_isBackgroundComamnd(cmd_line))
+        return;
     string str(cmd_line);
     // find last character other than spaces
     unsigned int idx = str.find_last_not_of(WHITESPACE);
@@ -168,13 +151,20 @@ void _removeBackgroundSign(char* cmd_line)
     cmd_line[str.find_last_not_of(WHITESPACE, idx) + 1] = 0;
 }
 
-int numOfWords(const char* cmd_line, string* argsTable)
+string cleanLine(const char* cmd_line)
 {
-    string line = _trim(cmd_line);
+    string line = cmd_line;
     char* cmd = new char[line.length() + 1];
     strcpy(cmd, line.c_str());
     _removeBackgroundSign(cmd);
     line = _trim(cmd);
+    return line;
+}
+
+int numOfWords(const char* cmd_line, string* argsTable)
+{
+    string line = cleanLine(cmd_line);
+    line = _trim(line);
     int count = 1;
     string cur;
     cur += line[0];
@@ -185,7 +175,6 @@ int numOfWords(const char* cmd_line, string* argsTable)
         {
             count++;
             argsTable[index++] = cur;
-            cout << cur << " num " << i << endl;
             cur = "";
         }
         else
@@ -196,7 +185,6 @@ int numOfWords(const char* cmd_line, string* argsTable)
     }
     if (cur != " ")
         argsTable[index++] = cur;
-    cout << cur << " last" << endl;
     argsTable[index] = '\0';
     return count;
 }
@@ -923,7 +911,6 @@ void SimpleCommand::execute()
     bool redirectionhapped=false;
     std::string argsTable[22];
     int argsCnt = numOfWords(cmdLine, argsTable);
-    cout << argsCnt << "argsCnt" << endl;
     std::string findingRedirection = cmdLine;
     if(findingRedirection.find('>')!=string::npos)
     {
@@ -935,15 +922,6 @@ void SimpleCommand::execute()
             argsTable[i]=used[i];
         }
     }
-    bool exists = _isBackgroundComamnd(cmdLine);
-    if (exists)
-    {
-        if (argsTable[argsCnt-1] != "&")
-            argsTable[argsCnt-1].pop_back();
-        else
-            argsTable[argsCnt-1] = '\0';
-    }
-
     char** argv = new char* [argsCnt + 1];
     for(int i = 0 ; i < argsCnt ; i++)
     {
@@ -951,7 +929,6 @@ void SimpleCommand::execute()
         char* strCopy = new char[argsTable[i].size()+1];
         std::strcpy(strCopy,argsTable[i].c_str());
         argv[i]= strCopy;
-        cout << argv[i] << endl;
     }
     if(redirectionhapped)
     {
@@ -961,25 +938,9 @@ void SimpleCommand::execute()
     {
         argv[argsCnt] = nullptr;
     }
-    cout << argsTable[0] << "argstable 0 " << endl;
-     execvp(argsTable[0].c_str(), argv);
-    perror("smash error: execvp failed");
-    exit(errno);
-
-    /*std::string argsTable[22];
-    int argsCnt = numOfWords(cmdLine, argsTable);
-    char** argv = new char* [argsCnt + 1];
-    for(int i = 0 ; i < argsCnt ; i++)
-    {
-        argsTable[i]= _trim(argsTable[i]);
-        char* strCopy = new char[argsTable[i].size()+1];
-        std::strcpy(strCopy,argsTable[i].c_str());
-        argv[i]= strCopy;
-    }
-    argv[argsCnt] = nullptr;
     execvp(argsTable[0].c_str(), argv);
     perror("smash error: execvp failed");
-    exit(errno);*/
+    exit(errno);
 }
 
 void ComplexCommand::execute()
