@@ -275,7 +275,7 @@ int JobsList::countJobs() const
     return counter;
 }
 
-void JobsList::addJob(char* cmd_line, pid_t pid, bool isStopped)
+void JobsList::addJob(const char* cmd_line, pid_t pid, bool isStopped)
 {
     if (isStopped)
     {
@@ -764,7 +764,6 @@ void ForegroundCommand::execute()
             if (!job)
             {
                 string error = "smash error: fg: job-id " + to_string(pid) + " does not exist";
-                string error = "smash error: fg: job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
                 return;
             }
@@ -892,14 +891,14 @@ void SimpleCommand::execute()
     std::string argsTable[22];
     int argsCnt = numOfWords(cmdLine, argsTable);
     std::string findingRedirection = cmdLine;
-    if(findingRedirection.find(">")!=string::npos)
+    if(findingRedirection.find('>') != string::npos)
     {
-        char* used= new char*[argsCnt];
-        splitByArg(cmdLine, '|', used);
-        redirectionhapped=true;
-        for(int i=0;i<argsCnt;i++)
+        char** used = new char*[argsCnt];
+        splitByArg(cmdLine, '>', used);
+        redirectionhapped = true;
+        for(int i = 0 ; i < argsCnt ; i++)
         {
-            argsTable[i]=used[i];
+            argsTable[i] = used[i];
         }
     }
     bool exists = _isBackgroundComamnd(cmdLine);
@@ -973,7 +972,7 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
 {
     curCommand= nullptr;
     string cmd_s = _trim(string(cmdLine));
-    char* argTable[2];
+    char** argTable = new char*[2];
     splitByArg(cmdLine, '|', argTable);
     int fd[2];
     if (pipe(fd) == -1)
