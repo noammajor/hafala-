@@ -312,6 +312,7 @@ void JobsList::addJob(const char* cmd_line, pid_t pid, bool isStopped)
     {
         JobEntry* job = new JobEntry(background, getNextJobID(), pid, cmd_line);
         BGround[job->getJobId()-1] = job;
+       // cout << job->getJobId() << " new job id" << endl;
     }
 }
 
@@ -360,6 +361,7 @@ void JobsList::removeFinishedJobs()
                 perror("smash error: waitpid failed");
             }
             if (wait_res == BGround[i - 1]->getPid()) {
+              //  cout << BGround[i-1]->cmdLine << " delete" <<endl;
                 delete BGround[i - 1];
                 BGround[i - 1] = nullptr;
             }
@@ -371,6 +373,7 @@ void JobsList::removeFinishedJobs()
                 perror("smash error: waitpid failed");
             }
             if (wait_res == Stopped[i - 1]->getPid()) {
+             //   cout << Stopped[i-1]->cmdLine << " delete" <<endl;
                 delete Stopped[i - 1];
                 Stopped[i - 1] = nullptr;
             }
@@ -637,6 +640,7 @@ bool SmallShell::forkExtrenal(bool setTimeout, bool runInBack, const char* cmd_l
         if (runInBack)
         {
             SmallShell::getInstance().getJobs()->addJob(cmd_line, child_pid,false);
+           // cout << "run in back " << cmd_line << endl;
         }
         else
         {
@@ -929,17 +933,17 @@ void JobsCommand::execute()
 void SimpleCommand::execute()
 {
     //cout << cmdLine << " cmd line" << endl;
-    char* line = new char;
-    strcpy(line, cmdLine);
+    /*char* line = new char;
+    strcpy(line, cmdLine);*/
     std::string argsTable[22];
-    std::string findingRedirection = cmdLine;
+    //std::string findingRedirection = cmdLine;
     /*if(findingRedirection.find('>') != string::npos)
     {
         char** used = new char*[2];
         splitByArg(cmdLine, '>', used);
         strcpy(line, used[0]);
     }*/
-    int argsCnt = numOfWords(line, argsTable);
+    int argsCnt = numOfWords(cmdLine, argsTable);
     char** argv = new char* [argsCnt + 1];
     for(int i = 0 ; i < argsCnt ; i++)
     {
@@ -949,7 +953,7 @@ void SimpleCommand::execute()
         argv[i] = strCopy;
     }
     argv[argsCnt] = nullptr;
-    //cout << &argv[0] <<  " argv0 " << &argv[1] << " argv1 " << endl;
+   // cout << argv[0] <<  " argv0 " << argv[1] << " argv1 " << argsCnt<< " " <<endl;
     execvp(argsTable[0].c_str(), argv);
     perror("smash error: execvp failed");
     exit(errno);
