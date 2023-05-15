@@ -6,7 +6,7 @@ sleep 6&
 sleep 4&
 sleep 9&
 sleep 15&
-sleep 1&
+sleep 7&
 sleep 3&
 jobs
 quit kill

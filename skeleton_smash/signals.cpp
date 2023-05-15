@@ -51,6 +51,7 @@ void ctrlCHandler(int sig_num) {
         perror("smash error: kill failed");
     }
     cout << "smash: process " << job->getPid() << " was killed" << endl ;
+    SmallShell::getInstance().jobsList->removeJobById(job->Job_ID);
     delete job;
 }
 
@@ -64,10 +65,11 @@ void alarmHandler(int sig_num) {
         {
             cout <<"smash: "<<_trim(timedOut[i]->cmd_line) << " timed out!" << endl;
             if (timedOut[i]->timeout_pid)
-                if(kill(timedOut[i]->timeout_pid, SIGKILL) == -1)
-                {
+            {
+                if (kill(timedOut[i]->timeout_pid, SIGKILL) == -1) {
                     perror("smash error: kill failed");
                 }
+            }
             delete timedOut[i];
             timedOut.erase(timedOut.begin() + i);
         }

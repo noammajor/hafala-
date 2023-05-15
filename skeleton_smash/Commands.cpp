@@ -28,7 +28,7 @@ std::string fileNameOpen(const char* cmd_line)
     std::string fileName = cmd_line;
     if(fileName.find(">>") < fileName.length())
     {
-        return _trim(fileName.substr(fileName.find(">>")+2,fileName.length()));
+        return _trim(fileName.substr(fileName.find('>')+2,fileName.length()));
     }
     else
     {
@@ -57,11 +57,11 @@ bool redirection(const char* cmd_line, bool setTimeout)
         int fd;
         if (append)
         {
-            fd = open(directFile.c_str(), O_APPEND|O_CREAT|O_RDWR, 0666);
+            fd = open(directFile.c_str(), O_APPEND|O_CREAT|O_WRONLY, 0655);
         }
         if (!(append))
         {
-            fd = open(directFile.c_str(), O_TRUNC|O_CREAT|O_RDWR, 0666);
+            fd = open(directFile.c_str(), O_TRUNC|O_CREAT|O_WRONLY, 0655);
         }
         if (fd < 0)
         {
@@ -161,9 +161,40 @@ string cleanLine(const char* cmd_line)
     return line;
 }
 
+void splitByArg(const char* line, char arg, char** result)
+{
+    string lineString = _trim(line);
+    string arg1, arg2;
+    for (int i = 0 ; i < (int)lineString.find(arg) ; i++)
+    {
+        arg1 += lineString[i];
+    }
+    arg1 += '\0';
+    char* strCopy = new char[arg1.size()+1];
+    std::strcpy(strCopy,arg1.c_str());
+    result[0]= strCopy;
+    int j = (int)lineString.find(arg) + 1;
+    if (lineString[j] == '&')
+        j++;
+    for ( ; j < (int)lineString.length() ; j++)
+        arg2 += lineString[j];
+    arg2 += '\0';
+    char* strCopy2 = new char[arg2.size()+1];
+    std::strcpy(strCopy2,arg2.c_str());
+    result[1]= strCopy2;
+}
+
 int numOfWords(const char* cmd_line, string* argsTable)
 {
     string line = cleanLine(cmd_line);
+    char** splitCmd = new char*[2];
+    if (line.find('>') != string::npos)
+    {
+        char* temp = new char;
+        splitByArg(cmd_line, '>', splitCmd);
+        strcpy(temp, splitCmd[0]);
+        line = temp;
+    }
     line = _trim(line);
     int count = 1;
     string cur;
@@ -187,29 +218,6 @@ int numOfWords(const char* cmd_line, string* argsTable)
         argsTable[index++] = cur;
     argsTable[index] = '\0';
     return count;
-}
-
-void splitByArg(const char* line, char arg, char** result)
-{
-    string lineString = _trim(line);
-    string arg1, arg2;
-    for (int i = 0 ; i < (int)lineString.find(arg) ; i++)
-    {
-        arg1 += lineString[i];
-    }
-    arg1 += '\0';
-    char* strCopy = new char[arg1.size()+1];
-    std::strcpy(strCopy,arg1.c_str());
-    result[0]= strCopy;
-    int j = (int)lineString.find(arg) + 1;
-    if (lineString[j] == '&')
-        j++;
-    for ( ; j < (int)lineString.length() ; j++)
-        arg2 += lineString[j];
-    arg2 += '\0';
-    char* strCopy2 = new char[arg2.size()+1];
-    std::strcpy(strCopy2,arg2.c_str());
-    result[1]= strCopy2;
 }
 
 string findCommand(const char* cmd_line)
@@ -348,13 +356,23 @@ void JobsList::removeFinishedJobs()
         if (BGround[i-1])
         {
             int wait_res = waitpid(BGround[i - 1]->getPid(), nullptr, WNOHANG);
-
             if (wait_res == -1) {
                 perror("smash error: waitpid failed");
             }
             if (wait_res == BGround[i - 1]->getPid()) {
                 delete BGround[i - 1];
                 BGround[i - 1] = nullptr;
+            }
+        }
+        if (Stopped[i-1])
+        {
+            int wait_res = waitpid(Stopped[i - 1]->getPid(), nullptr, WNOHANG);
+            if (wait_res == -1) {
+                perror("smash error: waitpid failed");
+            }
+            if (wait_res == Stopped[i - 1]->getPid()) {
+                delete Stopped[i - 1];
+                Stopped[i - 1] = nullptr;
             }
         }
     }
@@ -556,7 +574,7 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
     {
         setTimeout = true;
     }
-    if(cmd_s.find('>') != string::npos || cmd_s.find(">>") != string::npos)   //redirection Builtin
+    if(cmd_s.find('>') != string::npos)   //redirection Builtin
     {
         redirectionHappened = true;
         isChild = redirection(cmd_line, setTimeout);
@@ -574,13 +592,15 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
         if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
             cmd = new ComplexCommand(cmd_line);
         else
+        {
             cmd = new SimpleCommand(cmd_line);
+        }
     }
     if(!cmd && !redirectionHappened)
     {
         cmd = BuiltIn(cmd_line);
         if(!cmd && forkExtrenal(setTimeout, runInBack, cmd_line))
-        {;
+        {
             if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
                 cmd = new ComplexCommand(cmd_line);
             else
@@ -685,7 +705,7 @@ void SmallShell::executeCommand(const char *cmd_line)
 {
     char* cmd = new char[strlen(cmd_line)] ;
     strcpy(cmd, cmd_line);
-    const char* cmdLine = cmd;
+    char* cmdLine = cmd;
     Command* command = CreateCommand(cmdLine);
     if(command == nullptr)
     {
@@ -908,36 +928,28 @@ void JobsCommand::execute()
 
 void SimpleCommand::execute()
 {
-    bool redirectionhapped=false;
+    //cout << cmdLine << " cmd line" << endl;
+    char* line = new char;
+    strcpy(line, cmdLine);
     std::string argsTable[22];
-    int argsCnt = numOfWords(cmdLine, argsTable);
     std::string findingRedirection = cmdLine;
-    if(findingRedirection.find('>')!=string::npos)
+    /*if(findingRedirection.find('>') != string::npos)
     {
-        char** used= new char*[argsCnt];
+        char** used = new char*[2];
         splitByArg(cmdLine, '>', used);
-        redirectionhapped=true;
-        for(int i=0;i<argsCnt;i++)
-        {
-            argsTable[i]=used[i];
-        }
-    }
+        strcpy(line, used[0]);
+    }*/
+    int argsCnt = numOfWords(line, argsTable);
     char** argv = new char* [argsCnt + 1];
     for(int i = 0 ; i < argsCnt ; i++)
     {
         argsTable[i]= _trim(argsTable[i]);
         char* strCopy = new char[argsTable[i].size()+1];
         std::strcpy(strCopy,argsTable[i].c_str());
-        argv[i]= strCopy;
+        argv[i] = strCopy;
     }
-    if(redirectionhapped)
-    {
-        argv[argsCnt-1] = nullptr;
-    }
-    else
-    {
-        argv[argsCnt] = nullptr;
-    }
+    argv[argsCnt] = nullptr;
+    //cout << &argv[0] <<  " argv0 " << &argv[1] << " argv1 " << endl;
     execvp(argsTable[0].c_str(), argv);
     perror("smash error: execvp failed");
     exit(errno);
