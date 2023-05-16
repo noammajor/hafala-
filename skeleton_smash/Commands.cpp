@@ -39,19 +39,19 @@ std::string fileNameOpen(const char* cmd_line)
 
 string _ltrim(const std::string& s)
 {
-  size_t start = s.find_first_not_of(WHITESPACE);
-  return (start == std::string::npos) ? "" : s.substr(start);
+    size_t start = s.find_first_not_of(WHITESPACE);
+    return (start == std::string::npos) ? "" : s.substr(start);
 }
 
 string _rtrim(const std::string& s)
 {
-  size_t end = s.find_last_not_of(WHITESPACE);
-  return (end == std::string::npos) ? "" : s.substr(0, end + 1);
+    size_t end = s.find_last_not_of(WHITESPACE);
+    return (end == std::string::npos) ? "" : s.substr(0, end + 1);
 }
 
 string _trim(const std::string& s)
 {
-  return _rtrim(_ltrim(s));
+    return _rtrim(_ltrim(s));
 }
 
 int _parseCommandLine(const char* cmd_line, char** args) {
@@ -257,7 +257,7 @@ void JobsList::addJob(const char* cmd_line, pid_t pid, bool isStopped)
     {
         JobEntry* job = new JobEntry(background, getNextJobID(), pid, cmd_line);
         BGround[job->getJobId()-1] = job;
-       // cout << job->getJobId() << " new job id" << endl;
+        // cout << job->getJobId() << " new job id" << endl;
     }
 }
 
@@ -306,7 +306,7 @@ void JobsList::removeFinishedJobs()
                 perror("smash error: waitpid failed");
             }
             if (wait_res == BGround[i - 1]->getPid()) {
-              //  cout << BGround[i-1]->cmdLine << " delete" <<endl;
+                //  cout << BGround[i-1]->cmdLine << " delete" <<endl;
                 delete BGround[i - 1];
                 BGround[i - 1] = nullptr;
             }
@@ -318,7 +318,7 @@ void JobsList::removeFinishedJobs()
                 perror("smash error: waitpid failed");
             }
             if (wait_res == Stopped[i - 1]->getPid()) {
-             //   cout << Stopped[i-1]->cmdLine << " delete" <<endl;
+                //   cout << Stopped[i-1]->cmdLine << " delete" <<endl;
                 delete Stopped[i - 1];
                 Stopped[i - 1] = nullptr;
             }
@@ -958,7 +958,7 @@ void SimpleCommand::execute()
         argv[i] = strCopy;
     }
     argv[argsCnt] = nullptr;
-   // cout << argv[0] <<  " argv0 " << argv[1] << " argv1 " << argsCnt<< " " <<endl;
+    // cout << argv[0] <<  " argv0 " << argv[1] << " argv1 " << argsCnt<< " " <<endl;
     execvp(argsTable[0].c_str(), argv);
     perror("smash error: execvp failed");
     exit(errno);
@@ -978,27 +978,27 @@ void ComplexCommand::execute()
         else
             argsTable[argsCnt-1] = '\0';
     }
-        int jobID = SmallShell::getInstance().getJobs()->getNextJobID();
-        int pid= getpid();
-        if(pid == -1)
-        {
-            perror("smash error: getpid failed");
-        }
-        JobsList::JobEntry* job = new JobsList::JobEntry(forground, jobID, pid, cmdLine);
-        job->FGjobID();
-        SmallShell::getInstance().getJobs()->addToFG(job);
-        if(setpgrp()==-1)
-        {
-            perror("smash error: setpgrp failed");
-        }
-        char* argv = new char [COMMAND_ARGS_MAX_LENGTH];
-        strcpy(argv, cmdLine);
-        _removeBackgroundSign(argv);
-        strcpy(argv, _trim(argv).c_str());
-        char* full_array [] = {(char*)"/bin/bash",(char*)"-c",(char*)argv, nullptr};
-        execv("/bin/bash", full_array);
-        perror("smash error: execv failed");
-        exit(errno);
+    int jobID = SmallShell::getInstance().getJobs()->getNextJobID();
+    int pid= getpid();
+    if(pid == -1)
+    {
+        perror("smash error: getpid failed");
+    }
+    JobsList::JobEntry* job = new JobsList::JobEntry(forground, jobID, pid, cmdLine);
+    job->FGjobID();
+    SmallShell::getInstance().getJobs()->addToFG(job);
+    if(setpgrp()==-1)
+    {
+        perror("smash error: setpgrp failed");
+    }
+    char* argv = new char [COMMAND_ARGS_MAX_LENGTH];
+    strcpy(argv, cmdLine);
+    _removeBackgroundSign(argv);
+    strcpy(argv, _trim(argv).c_str());
+    char* full_array [] = {(char*)"/bin/bash",(char*)"-c",(char*)argv, nullptr};
+    execv("/bin/bash", full_array);
+    perror("smash error: execv failed");
+    exit(errno);
 }
 
 
@@ -1014,8 +1014,6 @@ void PipeCommand::execute()
         argTable[1][0] = ' ';
         _trim(argTable[1]);
     }
-    int prevIn = dup(0);
-    int prevOut = dup(1);
     int fd[2];
     if (pipe(fd) == -1)
     {
@@ -1055,8 +1053,6 @@ void PipeCommand::execute()
         }
         command1 = SmallShell::getInstance().CreateCommand(argTable[0]);
         command1->execute();
-        dup2(prevOut, 1);
-        return;
     }
     pid_t child2 = fork();
     if(child2 < 0)
@@ -1077,8 +1073,6 @@ void PipeCommand::execute()
         }
         command2 = SmallShell::getInstance().CreateCommand(argTable[1]);
         command2->execute();
-        dup2(prevIn, 0);
-        return;
     }
     else
     {
@@ -1212,40 +1206,40 @@ void GetFileTypeCommand::execute()
     struct stat stat_buf;
 
     stat(argTable[1].c_str(),&stat_buf);
-     output = argTable[1] + "\'s" + " type is ";
-     if(S_ISREG(stat_buf.st_mode))
-     {
-         output = output + "\"regular file\"";
-     }
-     else if (S_ISDIR(stat_buf.st_mode))
-     {
-         output = output + "\"directory file\"";
-     }
-     else if (S_ISLNK(stat_buf.st_mode))
-     {
-         output = output + "\"symbolic link file\"";
-     }
-     else if(S_ISBLK(stat_buf.st_mode))
-     {
-         output = output + "\"block file\"";
-     }
-     else if (S_ISCHR(stat_buf.st_mode))
-     {
-         output = output + "\"character file\"";
-     }
-     else if (S_ISFIFO(stat_buf.st_mode))
-     {
-         output = output + "\"FIFO file\"";
-     }
-     else if(S_ISSOCK(stat_buf.st_mode))
-     {
-         output = output + "\"socket file\"";
-     }
-     ifstream in_file(argTable[1],ios::binary);
-     in_file.seekg(0,ios::end);
-     int fileSize=in_file.tellg();
-     output = output + " and takes up " + to_string(fileSize) + " bytes";
-     cout << output << endl;
+    output = argTable[1] + "\'s" + " type is ";
+    if(S_ISREG(stat_buf.st_mode))
+    {
+        output = output + "\"regular file\"";
+    }
+    else if (S_ISDIR(stat_buf.st_mode))
+    {
+        output = output + "\"directory file\"";
+    }
+    else if (S_ISLNK(stat_buf.st_mode))
+    {
+        output = output + "\"symbolic link file\"";
+    }
+    else if(S_ISBLK(stat_buf.st_mode))
+    {
+        output = output + "\"block file\"";
+    }
+    else if (S_ISCHR(stat_buf.st_mode))
+    {
+        output = output + "\"character file\"";
+    }
+    else if (S_ISFIFO(stat_buf.st_mode))
+    {
+        output = output + "\"FIFO file\"";
+    }
+    else if(S_ISSOCK(stat_buf.st_mode))
+    {
+        output = output + "\"socket file\"";
+    }
+    ifstream in_file(argTable[1],ios::binary);
+    in_file.seekg(0,ios::end);
+    int fileSize=in_file.tellg();
+    output = output + " and takes up " + to_string(fileSize) + " bytes";
+    cout << output << endl;
 }
 
 void ChmodCommand::execute()
