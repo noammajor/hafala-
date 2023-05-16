@@ -1110,6 +1110,68 @@ void RedirectionCommand::execute()
     bool append = false;
     if (line.find(">>") != string::npos)
         append = true;
+    char** args = new char*[2];
+    string txtFile=args[1];
+    splitByArg(cmdLine, '>', args);
+    if(txtFile[0]==">")
+    {
+        txtFile=txtFile.substr(1,txtFile.length());
+    }
+    Command* cmd = SmallShell::getInstance().CreateCommand(txtFile);
+    txtFile= _trim(txtFile);
+    int output_channel= dup(1);
+    int fd = open(txt_file.c_str(),O_CREAT|O_WRONLY|(append ? O_APPEND:O_TRUNC),0655);
+    if(fd == -1)
+    {
+        perror("smash error: open failed");
+        return;
+    }
+    if(dup2 (fd,1) == -1)
+    {
+        perror("smash error: dup2 failed");
+        return;
+    }
+    if(close(fd) == -1)
+    {
+        perror("smash error: close failed");
+        return;
+    }
+    cmd->execute();
+
+    if(dup2(output_channel,1) == -1)
+    {
+        perror("smash error: dup2 failed");
+        return;
+    }
+    if(close(output_channel) == -1) {
+        perror("smash error: close failed");
+        return;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+    /*
+    string line = cmdLine;
+    bool append = false;
+    if (line.find(">>") != string::npos)
+        append = true;
     std::string directFile = fileNameOpen(cmdLine);
 
     char** args = new char*[2];
@@ -1146,7 +1208,7 @@ void RedirectionCommand::execute()
         close(prevOut);  //////////////////////////////////////////////////////////////////syscall errors
     }
 }
-
+*/
 void SetcoreCommand::execute()
 {
     std::string argTable[22];
