@@ -165,6 +165,34 @@ int numOfWords(const char* cmd_line, string* argsTable)
     return count;
 }
 
+const char* removeTimeout(const char* cmd_line)
+{
+    string line = _trim(cmd_line);
+    string timeoutWord = "timeoutWord";
+    string* result = new string;
+    int i = timeoutWord.length();
+    for ( ;  i < (int)line.length() ; i++)
+    {
+        if (!strcmp(&line[i], " "))
+            break;
+    }
+    for ( ;  i < (int)line.length() ; i++)
+    {
+        if (!isdigit(line[i]))
+            break;
+    }
+    for (;  i < (int)line.length() ; i++)
+    {
+        if (!strcmp(&line[i], " "))
+            break;
+    }
+    for (;  i < (int)line.length() ; i++)
+    {
+        result += line[i];
+    }
+    return result->c_str();
+}
+
 string findCommand(const char* cmd_line)
 {
     string line = cmd_line;
@@ -180,9 +208,31 @@ string findCommand(const char* cmd_line)
         i = 0;
     else
     {
+        if (line[i] != ' ')
+        {
+            i = 0;
+        }
         for (;  i < (int)line.length() ; i++)
         {
-            if (!strcmp(&line[i], " ") && !isdigit(line[i]))
+            if (!strcmp(&line[i], " "))
+                break;
+        }
+        if (!isdigit(line[i]))
+        {
+            i = 0;
+        }
+        for (;  i < (int)line.length() ; i++)
+        {
+            if (!isdigit(line[i]))
+                break;
+        }
+        if (line[i] != ' ')
+        {
+            i = 0;
+        }
+        for (;  i < (int)line.length() ; i++)
+        {
+            if (!strcmp(&line[i], " "))
                 break;
         }
     }
@@ -559,12 +609,15 @@ void SmallShell::add_timeout(Timeout_obj* newTime)
         if (obj->alarm_time < min)
         {
             //min = obj->alarm_time;
-            set = true;
+            set = false;
             break;
         }
     }
-    time_t setAlarm = min - time(nullptr);
-    alarm(setAlarm);
+    if (set)
+    {
+        time_t setAlarm = min - time(nullptr);
+        alarm(setAlarm);
+    }
     timeout.push_back(newTime);
 }
 
@@ -908,8 +961,11 @@ void ExternalCommand::execute()
         {
             if (setTimeout && numOfWords(cmdLine,argsTable)>1)
             {
-                Command* timeoutCmd = new TimeoutCommand(cmdLine, child_pid);
-                timeoutCmd->execute();
+                if (isNum(argsTable[1]))
+                {
+                    Command* timeoutCmd = new TimeoutCommand(cmdLine, child_pid);
+                    timeoutCmd->execute();
+                }
             }
             if(setTimeout && numOfWords(cmdLine,argsTable)==1)
             {
@@ -934,10 +990,23 @@ void ExternalCommand::execute()
     {
         Command* command;
         string str(cmdLine);
-        if (str.find('*') != string::npos || str.find('?') != string::npos)
-            command =  new ComplexCommand(cmdLine);
+        if (setTimeout)
+        {
+            const char* cmd = removeTimeout(cmdLine);
+            cout << cmd  << " removed command" << endl;
+            if (str.find('*') != string::npos || str.find('?') != string::npos)
+                command =  new ComplexCommand(cmd);
+            else
+                command = new SimpleCommand(cmd);
+        }
         else
-            command = new SimpleCommand(cmdLine);
+        {
+            if (str.find('*') != string::npos || str.find('?') != string::npos)
+                command =  new ComplexCommand(cmdLine);
+            else
+                command = new SimpleCommand(cmdLine);
+        }
+        //command->printComd();   ////////////////////////////////////////////////////////////
         command->execute();
     }
 }

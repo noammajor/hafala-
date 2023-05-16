@@ -61,13 +61,17 @@ void alarmHandler(int sig_num) {
     time_t curTime = time(nullptr);
     for (int i = 0 ; i < (int)timedOut.size() ; i++)
     {
-        if (timedOut[i]->timeout_pid < curTime)
+        if (timedOut[i]->alarm_time <= curTime)
         {
-            cout <<"smash: "<<_trim(timedOut[i]->cmd_line) << " timed out!" << endl;
-            if (timedOut[i]->timeout_pid)
+            if (waitpid(timedOut[i]->timeout_pid, nullptr, WNOHANG) == 0)
             {
-                if (kill(timedOut[i]->timeout_pid, SIGKILL) == -1) {
-                    perror("smash error: kill failed");
+                if (timedOut[i]->cmd_line)
+                    cout <<"smash: "<<_trim(timedOut[i]->cmd_line) << " timed out!" << endl;
+                if (timedOut[i]->timeout_pid)
+                {
+                    if (kill(timedOut[i]->timeout_pid, SIGKILL) == -1) {
+                        perror("smash error: kill failed");
+                    }
                 }
             }
             delete timedOut[i];
