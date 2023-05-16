@@ -1014,6 +1014,8 @@ void PipeCommand::execute()
         argTable[1][0] = ' ';
         _trim(argTable[1]);
     }
+    int prevIn = dup(0);
+    int prevOut = dup(1);
     int fd[2];
     if (pipe(fd) == -1)
     {
@@ -1030,7 +1032,6 @@ void PipeCommand::execute()
     {
         if (setpgrp() == -1)
             perror("smash error: setpgrp failed");
-        cout << "child 1 " <<argTable[0] << endl;
         if (errorPipe)
         {
             if (dup2(fd[1], 2) == -1) {
@@ -1052,9 +1053,10 @@ void PipeCommand::execute()
         {
             perror("smash error: close failed");
         }
-        cout << "execute 1 " <<argTable[0] << endl;
         command1 = SmallShell::getInstance().CreateCommand(argTable[0]);
         command1->execute();
+        dup2(prevOut, 1);
+        return;
     }
     pid_t child2 = fork();
     if(child2 < 0)
@@ -1064,7 +1066,6 @@ void PipeCommand::execute()
     if (child2 == 0)        //second command
     {
         setpgrp();     //////////////////////////////////////////////////////////////////////////////////syscall errors
-        cout << "child 2 " <<argTable[1] << endl;
         dup2(fd[0], 0);
         if(close(fd[0]) == -1)
         {
@@ -1074,9 +1075,10 @@ void PipeCommand::execute()
         {
             perror("smash error: close failed");
         }
-        cout << "execute 2 " << argTable[1] << endl;
         command2 = SmallShell::getInstance().CreateCommand(argTable[1]);
         command2->execute();
+        dup2(prevIn, 0);
+        return;
     }
     else
     {
