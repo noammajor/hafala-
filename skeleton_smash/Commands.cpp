@@ -1096,6 +1096,10 @@ void PipeCommand::execute()
         argTable[1][0] = ' ';
         _trim(argTable[1]);
     }
+
+    int prevIn = dup(0);
+    int prevOut = dup(1);
+    int prevErr = dup(2);
     int fd[2];
     if (pipe(fd) == -1)
     {
@@ -1103,7 +1107,43 @@ void PipeCommand::execute()
         return;
     }
 
-    pid_t child1 = fork();
+    if (errorPipe)
+    {
+        if (dup2(fd[1], 2) == -1) {
+            perror("smash error: dup2 failed");
+        }
+    }
+    else {
+        if (dup2(fd[1], 1) == -1) {
+            perror("smash error: dup2 failed");
+        }
+    }
+    command1 = SmallShell::getInstance().CreateCommand(argTable[0]);
+    command1->execute();
+
+    if (errorPipe)
+    {
+        if (dup2(prevErr, 2) == -1) {
+            perror("smash error: dup2 failed");
+        }
+    }
+    else {
+        if (dup2(prevOut, 1) == -1) {
+            perror("smash error: dup2 failed");
+        }
+    }
+
+    if (dup2(fd[0], 0) == -1) {
+        perror("smash error: dup2 failed");
+    }
+    command2 = SmallShell::getInstance().CreateCommand(argTable[0]);
+    command2->execute();
+
+    if (dup2(prevIn, 0) == -1) {
+        perror("smash error: dup2 failed");
+    }
+
+    /*pid_t child1 = fork();
     if(child1 < 0)
     {
         perror("smash error: fork failed");
@@ -1168,7 +1208,7 @@ void PipeCommand::execute()
         {
             perror("smash error: close failed");
         }
-    }
+    }*/
 }
 
 void PipeCommand::cleanup()
