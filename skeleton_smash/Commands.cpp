@@ -1378,7 +1378,7 @@ void GetFileTypeCommand::execute()
     }
     struct stat stat_buf;
 
-    stat(argTable[1].c_str(),&stat_buf);
+    lstat(argTable[1].c_str(),&stat_buf);
     output = argTable[1] + "\'s" + " type is ";
     if(S_ISREG(stat_buf.st_mode))
     {
@@ -1386,27 +1386,27 @@ void GetFileTypeCommand::execute()
     }
     else if (S_ISDIR(stat_buf.st_mode))
     {
-        output = output + "\"directory file\"";
+        output = output + "\"directory\"";
     }
     else if (S_ISLNK(stat_buf.st_mode))
     {
-        output = output + "\"symbolic link file\"";
+        output = output + "\"symbolic link\"";
     }
     else if(S_ISBLK(stat_buf.st_mode))
     {
-        output = output + "\"block file\"";
+        output = output + "\"block device\"";
     }
     else if (S_ISCHR(stat_buf.st_mode))
     {
-        output = output + "\"character file\"";
+        output = output + "\"character device\"";
     }
     else if (S_ISFIFO(stat_buf.st_mode))
     {
-        output = output + "\"FIFO file\"";
+        output = output + "\"FIFO\"";
     }
     else if(S_ISSOCK(stat_buf.st_mode))
     {
-        output = output + "\"socket file\"";
+        output = output + "\"socket\"";
     }
     ifstream in_file(argTable[1],ios::binary);
     in_file.seekg(0,ios::end);
@@ -1421,6 +1421,12 @@ void ChmodCommand::execute()
     if(numOfWords(cmdLine,argTable)>3)
     {
         perror("smash error: gettype: invalid arguments");
+        return;
+    }
+    if(!isNum(argTable[1]))
+    {
+        perror("smash error: gettype: invalid arguments");
+        return;
     }
     const char* filename =  argTable[2].c_str();
     int permissions = std::stoi(argTable[1], nullptr, 8);
