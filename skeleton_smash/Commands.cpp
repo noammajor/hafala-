@@ -1371,10 +1371,12 @@ void GetFileTypeCommand::execute()
     if(numOfWords(cmdLine,argTable)>2)
     {
         perror("smash error: gettype: invalid aruments");
+        return;
     }
     if(!(is_file_exist(argTable[1].c_str())))
     {
         perror("smash error: gettype: invalid arguments");
+        return;
     }
     struct stat stat_buf;
 
@@ -1408,9 +1410,9 @@ void GetFileTypeCommand::execute()
     {
         output = output + "\"socket\"";
     }
-    ifstream in_file(argTable[1],ios::binary);
+   /* ifstream in_file(argTable[1],ios::binary);
     in_file.seekg(0,ios::end);
-    int fileSize=in_file.tellg();
+    int fileSize=in_file.tellg();*/
     output = output + " and takes up " + to_string(fileSize) + " bytes";
     cout << output << endl;
 }
