@@ -354,7 +354,7 @@ void JobsList::removeFinishedJobs()
             if (wait_res == -1) {
                 perror("smash error: waitpid failed");
             }
-            if (wait_res == BGround[i - 1]->getPid()) {
+            if (wait_res != 0) {
                 delete BGround[i - 1];
                 BGround[i - 1] = nullptr;
             }
@@ -365,7 +365,7 @@ void JobsList::removeFinishedJobs()
             if (wait_res == -1) {
                 perror("smash error: waitpid failed");
             }
-            if (wait_res == Stopped[i - 1]->getPid()) {
+            if (wait_res != 0) {
                 delete Stopped[i - 1];
                 Stopped[i - 1] = nullptr;
             }
