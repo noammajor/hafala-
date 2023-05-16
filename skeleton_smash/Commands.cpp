@@ -165,7 +165,7 @@ int numOfWords(const char* cmd_line, string* argsTable)
     return count;
 }
 
-string removeTimeout(const char* cmd_line)
+const char* removeTimeout(const char* cmd_line)
 {
     string line = _trim(cmd_line);
     string timeoutWord = "timeout";
@@ -173,7 +173,7 @@ string removeTimeout(const char* cmd_line)
     int i = timeoutWord.length();
     for ( ;  i < (int)line.length() ; i++)
     {
-        if (line[i] != ' ')
+        if (!strcmp(&line[i], " "))
             break;
     }
     for ( ;  i < (int)line.length() ; i++)
@@ -183,20 +183,20 @@ string removeTimeout(const char* cmd_line)
     }
     for (;  i < (int)line.length() ; i++)
     {
-        if (line[i] != ' ')
+        if (!strcmp(&line[i], " "))
             break;
     }
     string result = cmd_s.substr(i, cmd_s.length());
-    /*const char* res = result.c_str();
-    cout << res << " new command" <<endl;*/
-    return result;
+    //cout << result << " before return" << endl;
+    const char* res = result.c_str();
+    return res;
 }
 
 string findCommand(const char* cmd_line)
 {
-    string line = cmd_line;
+    string line = _trim(cmd_line);
     string command = "";
-    string timeout = "timeout";
+    /*string timeout = "timeout";
     int i = 0;
     for (; i < (int)line.length() && i < (int)timeout.length() ; i++)
     {
@@ -234,8 +234,8 @@ string findCommand(const char* cmd_line)
             if (!strcmp(&line[i], " "))
                 break;
         }
-    }
-    for ( ; i != (int)line.length() && isalpha(line[i]) ; i++)
+    }*/
+    for (int i = 0 ; i != (int)line.length() && isalpha(line[i]) ; i++)
         command += line[i];
     return command;
 }
@@ -550,24 +550,17 @@ JobsList* SmallShell::getJobs()
 /**
 * Creates and returns a pointer to Command class which matches the given command line (cmd_line)
 */
-Command* SmallShell::CreateCommand(const char* cmd_line)
-{
-
+Command* SmallShell::CreateCommand(const char* cmd_line) {
     string cmd = _trim(cmd_line);
     if (cmd.empty())
         return nullptr;
     string firstWord = findCommand(cmd.c_str());
 
-    if (cmd.find('>') != string::npos)
-    {
+    if (cmd.find('>') != string::npos) {
         return new RedirectionCommand(cmd_line);
-    }
-    else if (cmd.find('|') != string::npos)
-    {
+    } else if (cmd.find('|') != string::npos) {
         return new PipeCommand(cmd_line);
-    }
-
-    else if (firstWord == "chprompt")
+    } else if (firstWord == "chprompt")
         return new ChpromptCommand(cmd_line);
     else if (firstWord == "showpid")
         return new ShowPidCommand(cmd_line);
@@ -591,6 +584,9 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
         return new GetFileTypeCommand(cmd_line);
     else if (firstWord == "chmod")
         return new ChmodCommand(cmd_line);
+
+    else if (firstWord == "timeout")
+        return new TimeoutCommand(cmd_line, 0);
 
     else
         return new ExternalCommand(cmd_line);
@@ -641,6 +637,7 @@ void SmallShell::executeCommand(const char *cmd_line)
 
 
 /////////////////////////////////////////////////  Execute Commands   ///////////////////////////////////////////////////////////
+
 bool Command::IsLegal()
 {
     return true;
@@ -735,7 +732,7 @@ bool ForegroundCommand::IsLegal()
             JobsList::JobEntry *job = jobs->getJobById(pid);
             if (!job) {
                 string error = "smash error: fg: job-id " + to_string(pid) + " does not exist";
-               cerr<<error<<endl;
+                cerr<<error<<endl;
                 return false;
             }
         }
@@ -841,7 +838,7 @@ bool BackgroundCommand::IsLegal()
             JobsList::JobEntry *job = jobs->getJobById(pid);
             if (!job) {
                 string error = "smash error: bg: job-id " + firstArg + " does not exist";
-               cerr<< error<<endl;
+                cerr<< error<<endl;
                 return false;
             } else if (job->getStat() != stopped) {
                 string error = "smash error: bg: job-id " + firstArg + " is already running in the background";
@@ -924,49 +921,56 @@ void JobsCommand::execute()
     SmallShell::getInstance().getJobs()->printJobsList();
 }
 
-void ExternalCommand::execute() {
+void ExternalCommand::execute()
+{
     std::string argsTable[22];
     string cmd_s = _trim(cmdLine);
     bool runInBack = _isBackgroundComamnd(cmdLine);
     bool setTimeout = false;
     string firstWord = cmd_s.substr(0, cmd_s.find(' '));
-    if (firstWord == "timeout") {
+    if (firstWord == "timeout")
+    {
         setTimeout = true;
     }
 
     if (getpid() == SmallShell::getInstance().smashPid)
     {
         pid_t child_pid = fork();
-        if (child_pid < 0) {
+        if(child_pid < 0)
+        {
             perror("smash error: fork failed");
-        } else if (child_pid == 0) {
-            if (setpgrp() == -1) {
+        }
+        else if(child_pid == 0)
+        {
+            if(setpgrp() == -1)
+            {
                 perror("smash error: setpgrp failed");
             }
-        } else            //  child_pid > 0
+        }
+        else            //  child_pid > 0
         {
-            if (setTimeout && numOfWords(cmdLine, argsTable) > 1) {
+            if (setTimeout && numOfWords(cmdLine,argsTable)>1)
+            {
                 if (isNum(argsTable[1]))
                 {
-                    Command *timeoutCmd = new TimeoutCommand(cmdLine, child_pid);
+                    Command* timeoutCmd = new TimeoutCommand(cmdLine, child_pid);
                     timeoutCmd->execute();
                 }
-                else
-                {
-                    cerr << "smash error: timeout: invalid argument" << endl;
-                    return;
-                }
             }
-            if (setTimeout && numOfWords(cmdLine, argsTable) == 1) {
-                cerr << "smash error: timeout: invalid arguments" << endl;
+            if(setTimeout && numOfWords(cmdLine,argsTable)==1)
+            {
                 return;
             }
-            if (runInBack) {
-                SmallShell::getInstance().getJobs()->addJob(cmdLine, child_pid, false);
-            } else {
-                JobsList::JobEntry *job = new JobsList::JobEntry(forground, -1, child_pid, cmdLine);
+            if (runInBack)
+            {
+                SmallShell::getInstance().getJobs()->addJob(cmdLine, child_pid,false);
+            }
+            else
+            {
+                JobsList::JobEntry* job = new JobsList::JobEntry(forground, -1, child_pid, cmdLine);
                 SmallShell::getInstance().jobsList->FGround = job;
-                if (waitpid(child_pid, nullptr, WUNTRACED) == -1) {
+                if(waitpid(child_pid, nullptr, WUNTRACED) == -1)
+                {
                     perror("smash error: waitpid failed");
                 }
             }
@@ -974,39 +978,42 @@ void ExternalCommand::execute() {
     }
     if (getpid() != SmallShell::getInstance().smashPid)
     {
-        cout << cmdLine << " to create" <<endl;
-        Command *command;
+        Command* command;
         string str(cmdLine);
-        if (setTimeout &&  numOfWords(cmdLine, argsTable) > 2)
+        /*if (setTimeout)
         {
-            if (!isNum(argsTable[1]))
-            {
-                cerr << "smash error: timeout: invalid argument" << endl;
-                return;
-            }
-            string cmd_str = removeTimeout(cmdLine);
-            cout << cmd_str << " after remove" <<endl;
-            const char* cmd = cmd_str.c_str();
+            const char* cmd = removeTimeout(cmdLine);
+            cout << cmd  << " removed command" << endl;
             if (str.find('*') != string::npos || str.find('?') != string::npos)
                 command =  new ComplexCommand(cmd);
             else
                 command = new SimpleCommand(cmd);
         }
         else
-        {
-            if (str.find('*') != string::npos || str.find('?') != string::npos)
-                command = new ComplexCommand(cmdLine);
-            else
-                command = new SimpleCommand(cmdLine);
-        }
+        {*/
+        if (str.find('*') != string::npos || str.find('?') != string::npos)
+            command =  new ComplexCommand(cmdLine);
+        else
+            command = new SimpleCommand(cmdLine);
+        //}
+        //command->printComd();   ////////////////////////////////////////////////////////////
         command->execute();
     }
 }
 
-
 void SimpleCommand::execute()
 {
+    //cout << cmdLine << " cmd line" << endl;
+    /*char* line = new char;
+    strcpy(line, cmdLine);*/
     std::string argsTable[22];
+    //std::string findingRedirection = cmdLine;
+    /*if(findingRedirection.find('>') != string::npos)
+    {
+        char** used = new char*[2];
+        splitByArg(cmdLine, '>', used);
+        strcpy(line, used[0]);
+    }*/
     int argsCnt = numOfWords(cmdLine, argsTable);
     char** argv = new char* [argsCnt + 1];
     for(int i = 0 ; i < argsCnt ; i++)
@@ -1413,12 +1420,13 @@ bool KillCommand::IsLegal()
     }
     return true;
 }
+
 void KillCommand::execute()
 {
     SmallShell::getInstance().getJobs()->removeFinishedJobs();
     std::string arg[22];
     std::string sigNum;
-   int amount= numOfWords(cmdLine,arg);
+    int amount= numOfWords(cmdLine,arg);
     try
     {
         if (arg[1][0] == '-')
@@ -1463,6 +1471,11 @@ void KillCommand::execute()
     {
         cerr<<"smash error: kill: invalid arguments"<<endl;
     }
+}
+
+bool TimeoutCommand::IsLegal()
+{
+
 }
 
 void TimeoutCommand::execute()

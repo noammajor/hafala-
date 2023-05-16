@@ -223,6 +223,7 @@ public:
     TimeoutCommand(const char* cmd_line, pid_t pid): BuiltInCommand(cmd_line), commandPid(pid){}
     virtual ~TimeoutCommand() {}
     void execute() override;
+    bool IsLegal() override;
 };
 
 ///////////////////////////////////////////////  SpecialCommands   ///////////////////////////////////////////////////////////
