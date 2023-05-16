@@ -668,6 +668,10 @@ void SmallShell::executeCommand(const char *cmd_line)
 
 
 /////////////////////////////////////////////////  Execute Commands   ///////////////////////////////////////////////////////////
+bool Command::IsLegal()
+{
+    return true;
+}
 
 void ChpromptCommand::execute()
 {
@@ -696,14 +700,19 @@ void GetCurrDirCommand::execute()
     cout << cwd << endl;
 }
 
-ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line)
+ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line){}
+
+bool ChangeDirCommand::IsLegal()
 {
     string args[21];
     if(numOfWords(cmdLine, args) > 2)
     {
         perror("smash error: cd: too many arguments");
+        return false;
     }
+    return true;
 }
+
 void ChangeDirCommand::execute()
 {
     string args[21];
@@ -742,30 +751,31 @@ void ChangeDirCommand::execute()
 }
 ForegroundCommand:: ForegroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs)
 {
+}
+bool ForegroundCommand::IsLegal()
+{
     string args[22];
     int argsCount = numOfWords(cmdLine, args);
+    int status;
     jobs->removeFinishedJobs();
     if (argsCount == 2) {
         string firstArg = args[1];
         try {
             int pid = stoi(firstArg);
-            if (pid <= 0)
-            {
+            if (pid <= 0) {
                 string error = "smash error: fg: job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
-                return;
+                return false;
             }
             JobsList::JobEntry *job = jobs->getJobById(pid);
-            if (!job)
-            {
+            if (!job) {
                 string error = "smash error: fg: job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
-                return;
+                return false;
             }
         }
         catch (exception &e) {
             perror("smash error: fg: invalid arguments");
-            return;
         }
     }
     else if (argsCount == 1)
@@ -773,28 +783,23 @@ ForegroundCommand:: ForegroundCommand(const char* cmd_line, JobsList* jobs): Bui
         JobsList::JobEntry *job = jobs->getLastJob();
         if (!job) {
             perror("jobs list is empty");
+            return false;
         }
     }
-
+    return true;
 }
+
 void ForegroundCommand::execute()
 {
     string args[22];
     int argsCount = numOfWords(cmdLine, args);
     int status;
-    jobs->removeFinishedJobs();
     if (argsCount == 2)
     {
         string firstArg = args[1];
         try
         {
             int pid = stoi(firstArg);
-            if (pid <= 0 )
-            {
-                string error = "smash error: fg: job-id " + to_string(pid) + " does not exist";
-                perror(error.c_str());
-                return;
-            }
             JobsList::JobEntry* job = jobs->getJobById(pid);
             if (!job)
             {
@@ -849,7 +854,9 @@ void ForegroundCommand::execute()
         perror("smash error: fg: invalid arguments");
     }
 }
-BackgroundCommand::BackgroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs)
+BackgroundCommand::BackgroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs) {
+}
+bool BackgroundCommand::IsLegal()
 {
     string args[22];
     int argsCount = numOfWords(cmdLine, args);
@@ -861,61 +868,49 @@ BackgroundCommand::BackgroundCommand(const char* cmd_line, JobsList* jobs): Buil
             if (pid <= 0) {
                 string error = "smash error: bg: job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
-                return;
+                return false;
             }
             JobsList::JobEntry *job = jobs->getJobById(pid);
             if (!job) {
                 string error = "smash error: bg: job-id " + to_string(pid) + " does not exist";
                 perror(error.c_str());
-                return;
+                return false;
             } else if (job->getStat() != stopped) {
                 string error = "smash error: bg: job-id " + to_string(pid) + " is already running in the background";
                 perror(error.c_str());
-                return;
+                return false;
             }
+            catch (exception & e)
+            {
+                perror("smash error: bg: invalid arguments");
+                return false;
+            }
+
         }
 
-        catch (exception & e)
-        {
-            perror("smash error: bg: invalid arguments");
-            return;
-        }
-    }
-    else if (argsCount == 1) {
+    } else if (argsCount == 1) {
         JobsList::JobEntry *job = jobs->getLastStoppedJob();
         if (!job) {
             perror("smash error: bg: there is no stopped jobs to resume");
+            return false;
         }
     }
+    return true;
 }
-
 void BackgroundCommand::execute()
 {
     string args[22];
     int argsCount = numOfWords(cmdLine, args);
-    jobs->removeFinishedJobs();
     if (argsCount == 2)
     {
         string firstArg = args[1];
         try
         {
             int pid = stoi(firstArg);
-            if (pid <= 0 )
-            {
-                string error = "smash error: bg: job-id " + to_string(pid) + " does not exist";
-                perror(error.c_str());
-                return;
-            }
             JobsList::JobEntry* job = jobs->getJobById(pid);
             if (!job)
             {
                 string error = "smash error: bg: job-id " + to_string(pid) + " does not exist";
-                perror(error.c_str());
-                return;
-            }
-            else if (job->getStat() != stopped)
-            {
-                string error = "smash error: bg: job-id " + to_string(pid) + " is already running in the background";
                 perror(error.c_str());
                 return;
             }
@@ -1222,7 +1217,7 @@ void PipeCommand::cleanup()
 
 void RedirectionCommand::execute()
 {
-    /*string line = cmdLine;
+    string line = cmdLine;
     bool append = false;
     if (line.find(">>") != string::npos)
         append = true;
@@ -1265,8 +1260,25 @@ void RedirectionCommand::execute()
     }
 
 
-}*/
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+    /*
     string line = cmdLine;
     bool append = false;
     if (line.find(">>") != string::npos)
@@ -1307,7 +1319,7 @@ void RedirectionCommand::execute()
         close(prevOut);  //////////////////////////////////////////////////////////////////syscall errors
     }
 }
-
+*/
 void SetcoreCommand::execute()
 {
     std::string argTable[22];
@@ -1469,26 +1481,25 @@ void QuitCommand::execute()
         perror("smash error: kill failed");
     }
 }
-
 KillCommand::KillCommand(const char *cmd_line, JobsList *jobs):BuiltInCommand(cmd_line),jobs(jobs)
+{}
+
+bool KillCommand::IsLegal()
 {
     std::string arg[22];
     if(numOfWords(cmdLine,arg) != 3 || arg[1].length() > 3 || arg[1].length() == 1)
     {
         perror("smash error: kill: invalid arguments");
+        return false;
     }
+    return true;
 }
-
 void KillCommand::execute()
 {
     SmallShell::getInstance().getJobs()->removeFinishedJobs();
     std::string arg[22];
     std::string sigNum;
-    if(numOfWords(cmdLine,arg) != 3 || arg[1].length() > 3 || arg[1].length() == 1)
-    {
-        perror("smash error: kill: invalid arguments");
-        return;
-    }
+    numOfWords(cmdLine,arg);
     try
     {
         if (arg[1][0] == '-')
