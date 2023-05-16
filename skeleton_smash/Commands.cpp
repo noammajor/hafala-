@@ -1373,47 +1373,46 @@ void GetFileTypeCommand::execute()
         perror("smash error: gettype: invalid aruments");
         return;
     }
-    if(!(is_file_exist(argTable[1].c_str())))
+    struct stat stat_buf;
+    if(lstat(argTable[1].c_str(),&stat_buf)))
     {
         perror("smash error: gettype: invalid arguments");
         return;
     }
-    struct stat stat_buf;
-
-    lstat(argTable[1].c_str(),&stat_buf);
+    std::string type;
+    std::string size = to_string(stat_buf.st_size);
+    std::string path = argTable[1];
+    mode_t mode = stat_buf.st_mode;
     output = argTable[1] + "\'s" + " type is ";
-    if(S_ISREG(stat_buf.st_mode))
+    if(S_ISREG(mode))
     {
         output = output + "\"regular file\"";
     }
-    else if (S_ISDIR(stat_buf.st_mode))
+    else if (S_ISDIR(mode))
     {
         output = output + "\"directory\"";
     }
-    else if (S_ISLNK(stat_buf.st_mode))
+    else if (S_ISLNK(mode))
     {
         output = output + "\"symbolic link\"";
     }
-    else if(S_ISBLK(stat_buf.st_mode))
+    else if(S_ISBLK(mode))
     {
         output = output + "\"block device\"";
     }
-    else if (S_ISCHR(stat_buf.st_mode))
+    else if (S_ISCHR(mode))
     {
         output = output + "\"character device\"";
     }
-    else if (S_ISFIFO(stat_buf.st_mode))
+    else if (S_ISFIFO(mode))
     {
         output = output + "\"FIFO\"";
     }
-    else if(S_ISSOCK(stat_buf.st_mode))
+    else if(S_ISSOCK(mode))
     {
         output = output + "\"socket\"";
     }
-   /* ifstream in_file(argTable[1],ios::binary);
-    in_file.seekg(0,ios::end);
-    int fileSize=in_file.tellg();*/
-    output = output + " and takes up " + to_string(fileSize) + " bytes";
+    output = output + " and takes up " + size + " bytes";
     cout << output << endl;
 }
 
