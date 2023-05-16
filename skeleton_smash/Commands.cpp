@@ -624,7 +624,7 @@ bool ChangeDirCommand::IsLegal()
 {
     string args[21];
     int amount=numOfWords(cmdLine, args);
-    if(amount =! 2)
+    if(amount != 2)
     {
         cerr<<"smash error: cd: too many arguments"<<endl;
         return false;
