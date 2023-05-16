@@ -436,10 +436,10 @@ status JobsList::JobEntry::getStat()
 
 void JobsList::JobEntry::printJob()
 {
-    cout << "[" << Job_ID << "] " << cmdLine << " : " << pid <<" " << getCurrentTime()<<" secs";
+    if (currentStatus == background)
+        cout << "[" << Job_ID << "] " << cmdLine << " : " << pid <<" " << getCurrentTime()<<" secs" << endl;
     if (currentStatus == stopped)
-        cout << " (stopped)";
-    cout << "\n";
+        cout << "[" << Job_ID << "] " << cmdLine << " : " << pid <<" " << getCurrentTime()<<" secs" << " (stopped)" <<endl;
 }
 
 void JobsList::JobEntry::printCmd()
@@ -662,8 +662,10 @@ void SmallShell::executeCommand(const char *cmd_line)
     {
         return;
     }
-    command->execute();
-    command->cleanup();
+    if (command->IsLegal()) {
+        command->execute();
+        command->cleanup();
+    }
 }
 
 
@@ -700,7 +702,6 @@ void GetCurrDirCommand::execute()
     cout << cwd << endl;
 }
 
-ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line){}
 
 bool ChangeDirCommand::IsLegal()
 {
@@ -721,16 +722,17 @@ void ChangeDirCommand::execute()
         perror("smash error: cd: too many arguments");
         return;
     }
-    else if(args[1] == "-")
+    char* cwd = get_current_dir_name();
+    if(args[1] == "-")
     {
-        char cwd[1024];
-        getcwd(cwd, 1024);
-        if (!SmallShell::getInstance().getCD())
+        if (!SmallShell::getInstance().curCD)
         {
             perror("smash error: cd: OLDPWD not set");
             return;
         }
-        else if (chdir(SmallShell::getInstance().getCD()) != 0)
+        const char* prevPath = SmallShell::getInstance().curCD;
+        int result = chdir(prevPath);
+        if (result != 0)
         {
             perror("smash error: chdir failed");
             return;
@@ -740,23 +742,19 @@ void ChangeDirCommand::execute()
     }
     else
     {
-        char cwd[1024];
-        SmallShell::getInstance().addCD(getcwd(cwd, 1024));
         if (chdir(args[1].c_str()) != 0)
         {
             perror("smash error: chdir failed");
             return;
         }
+        SmallShell::getInstance().curCD = cwd;
     }
 }
-ForegroundCommand:: ForegroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs)
-{
-}
+
 bool ForegroundCommand::IsLegal()
 {
     string args[22];
     int argsCount = numOfWords(cmdLine, args);
-    int status;
     jobs->removeFinishedJobs();
     if (argsCount == 2) {
         string firstArg = args[1];
@@ -854,16 +852,18 @@ void ForegroundCommand::execute()
         perror("smash error: fg: invalid arguments");
     }
 }
-BackgroundCommand::BackgroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs) {
-}
+
+
 bool BackgroundCommand::IsLegal()
 {
     string args[22];
     int argsCount = numOfWords(cmdLine, args);
     jobs->removeFinishedJobs();
-    if (argsCount == 2) {
+    if (argsCount == 2)
+    {
         string firstArg = args[1];
-        try {
+        try
+        {
             int pid = stoi(firstArg);
             if (pid <= 0) {
                 string error = "smash error: bg: job-id " + to_string(pid) + " does not exist";
@@ -880,15 +880,16 @@ bool BackgroundCommand::IsLegal()
                 perror(error.c_str());
                 return false;
             }
-            catch (exception & e)
-            {
-                perror("smash error: bg: invalid arguments");
-                return false;
-            }
-
+        }
+        catch (exception & e)
+        {
+            perror("smash error: bg: invalid arguments");
+            return false;
         }
 
-    } else if (argsCount == 1) {
+    }
+    else if (argsCount == 1)
+    {
         JobsList::JobEntry *job = jobs->getLastStoppedJob();
         if (!job) {
             perror("smash error: bg: there is no stopped jobs to resume");
@@ -897,6 +898,7 @@ bool BackgroundCommand::IsLegal()
     }
     return true;
 }
+
 void BackgroundCommand::execute()
 {
     string args[22];
@@ -1215,69 +1217,61 @@ void PipeCommand::cleanup()
 }
 
 
-void RedirectionCommand::execute()
-{
+void RedirectionCommand::execute() {
     string line = cmdLine;
     bool append = false;
     if (line.find(">>") != string::npos)
         append = true;
-    char** args = new char*[2];
-    string txtFile=args[1];
+    char **args = new char *[2];
     splitByArg(cmdLine, '>', args);
-    if(txtFile[0]==">")
-    {
-        txtFile=txtFile.substr(1,txtFile.length());
+    string txtFile = args[1];
+    if (txtFile[0] == '>') {
+        txtFile = txtFile.substr(1, txtFile.length());
     }
-    Command* cmd = SmallShell::getInstance().CreateCommand(txtFile);
-    txtFile= _trim(txtFile);
-    int output_channel= dup(1);
-    int fd = open(txt_file.c_str(),O_CREAT|O_WRONLY|(append ? O_APPEND:O_TRUNC),0655);
-    if(fd == -1)
-    {
+    Command *cmd = SmallShell::getInstance().CreateCommand(args[0]);
+    if (!cmd->IsLegal())
+        return;
+    txtFile = _trim(txtFile);
+    int output_channel = dup(1);
+    int fd = open(txtFile.c_str(), O_CREAT | O_WRONLY | (append ? O_APPEND : O_TRUNC), 0655);
+    if (fd == -1) {
         perror("smash error: open failed");
         return;
     }
-    if(dup2 (fd,1) == -1)
-    {
+    if (dup2(fd, 1) == -1) {
         perror("smash error: dup2 failed");
         return;
     }
-    if(close(fd) == -1)
-    {
+    if (close(fd) == -1) {
         perror("smash error: close failed");
         return;
     }
     cmd->execute();
 
-    if(dup2(output_channel,1) == -1)
-    {
+    if (dup2(output_channel, 1) == -1) {
         perror("smash error: dup2 failed");
         return;
     }
-    if(close(output_channel) == -1) {
+    if (close(output_channel) == -1) {
         perror("smash error: close failed");
         return;
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /*
     string line = cmdLine;
     bool append = false;
@@ -1481,8 +1475,7 @@ void QuitCommand::execute()
         perror("smash error: kill failed");
     }
 }
-KillCommand::KillCommand(const char *cmd_line, JobsList *jobs):BuiltInCommand(cmd_line),jobs(jobs)
-{}
+
 
 bool KillCommand::IsLegal()
 {
