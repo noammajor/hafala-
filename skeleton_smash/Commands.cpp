@@ -314,7 +314,7 @@ void JobsList::addJob(const char* cmd_line, pid_t pid, bool isStopped)
 void JobsList::printJobsList()
 {
     removeFinishedJobs();
-    for(int i = 0 ; i < (int)BGround.size() ; i++)
+    for(int i = 0 ; i < 100 ; i++)
     {
         if (BGround[i] && BGround[i]->currentStatus != forground)
             BGround[i]->printJob();
@@ -356,7 +356,6 @@ void JobsList::removeFinishedJobs()
                 perror("smash error: waitpid failed");
             }
             if (wait_res == BGround[i - 1]->getPid()) {
-                //  cout << BGround[i-1]->cmdLine << " delete" <<endl;
                 delete BGround[i - 1];
                 BGround[i - 1] = nullptr;
             }
@@ -368,7 +367,6 @@ void JobsList::removeFinishedJobs()
                 perror("smash error: waitpid failed");
             }
             if (wait_res == Stopped[i - 1]->getPid()) {
-                //   cout << Stopped[i-1]->cmdLine << " delete" <<endl;
                 delete Stopped[i - 1];
                 Stopped[i - 1] = nullptr;
             }
@@ -671,19 +669,24 @@ void ShowPidCommand::execute()
 
 void GetCurrDirCommand::execute()
 {
-    char cwd[1024];
-    getcwd(cwd,1024);
-    cout << cwd << endl;
+    cout << get_current_dir_name() << endl;
 }
 
 
 bool ChangeDirCommand::IsLegal()
 {
     string args[21];
-    if(numOfWords(cmdLine, args) > 2)
+    int amount=numOfWords(cmdLine, args);
+    if(amount != 2)
     {
         cerr<<"smash error: cd: too many arguments"<<endl;
         return false;
+    }
+    if(args[1] == "-") {
+        if (!SmallShell::getInstance().curCD) {
+            cerr << "smash error: cd: OLDPWD not set" << endl;
+            return false;
+        }
     }
     return true;
 }
@@ -691,19 +694,10 @@ bool ChangeDirCommand::IsLegal()
 void ChangeDirCommand::execute()
 {
     string args[21];
-    if(numOfWords(cmdLine, args) > 2)
-    {
-        cerr<<"smash error: cd: too many arguments"<<endl;
-        return;
-    }
+    numOfWords(cmdLine, args);
     char* cwd = get_current_dir_name();
     if(args[1] == "-")
     {
-        if (!SmallShell::getInstance().curCD)
-        {
-            cerr<<"smash error: cd: OLDPWD not set"<<endl;
-            return;
-        }
         const char* prevPath = SmallShell::getInstance().curCD;
         int result = chdir(prevPath);
         if (result != 0)
@@ -1405,11 +1399,71 @@ void RedirectionCommand::execute() {
     }
 }
 */
+bool SetcoreCommand::IsLegal()
+{
+    std::string argTable[22];
+    if(numOfWords(cmdLine,argTable)!=3)
+    {
+        cerr<<"smash error: setcore: invalid argument"<<endl;
+        return false;
+    }
+    if(argTable[1].find('-')<argTable[1].length())
+    {
+        std::string message = "smash error: setcore: job-id " + to_string(jobId) + " does not exist";
+        cerr<<message<<endl;
+        return false;
+    }
+    if(argTable[2].find('-')<argTable[2].length())
+    {
+        cerr<<"smash error: setcore: invalid core number"<< endl;
+        return false;
+    }
+    try
+    {
+        int jobId = stoi(argTable[1]);
+    }
+    catch (...)
+    {
+        std::string message = "smash error: setcore: job-id " + to_string(jobId) + " does not exist";
+        cerr << message <<endl;
+        return false;
+    }
+    try
+    {
+        int core = stoi(argTable[2]);
+    }
+    catch(...)
+    {
+        cerr<<"smash error: setcore: invalid core number"<<endl;
+        return;
+    }
+
+        JobsList::JobEntry* job = SmallShell::getInstance().getJobs()->getJobById(jobId);
+        if (!job)
+        {
+            std::string message = "smash error: setcore: job-id " + to_string(jobId) + " does not exist";
+            cerr << message <<endl;
+            return false;
+        }
+    }
+    long NumOfCores = sysconf(_SC_NPROCESSORS_ONLN);
+    if (NumOfCores == -1)
+    {
+        perror("smash error: sysconfig failed");
+        return false;
+    }
+    if (core < 0 || core >= NumOfCores)
+    {
+        cerr<<"smash error: setcore: invalid core number"<<endl;
+        return false;
+    }
+
+
+}
 void SetcoreCommand::execute()
 {
     std::string argTable[22];
-    if(numOfWords(cmdLine,argTable)>3)
-        cerr<<"smash error: setcore: invalid argument"<<endl;
+    numOfWords(cmdLine,argTable);
     try
     {
         int jobId = stoi(argTable[1]);
@@ -1425,11 +1479,6 @@ void SetcoreCommand::execute()
         if (NumOfCores == -1)
         {
             perror("smash error: sysconfig failed");
-            return;
-        }
-        if (core < 0 || core >= NumOfCores)
-        {
-            cerr<<"smash error: setcore: invalid core number"<<endl;
             return;
         }
         cpu_set_t cpuSet;               //Define cpu_set bit mask
@@ -1454,18 +1503,25 @@ bool is_file_exist(const char *fileName)
     std::ifstream infile(fileName);
     return infile.good();
 }
+bool GetFileTypeCommand::IsLegal()
+{
+    std::string argTable[22];
+    if(numOfWords(cmdLine,argTable)>2)
+    {
+        cerr<<"smash error: gettype: invalid aruments"<<endl;
+        return false;
+    }
 
+}
 void GetFileTypeCommand::execute()
 {
     std::string output;
     std::string argTable[22];
-   // cout<<cmdLine<< " cmdline" <<endl;
     if(numOfWords(cmdLine,argTable)>2)
     {
         cerr<<"smash error: gettype: invalid aruments"<<endl;
         return;
     }
-    //cout << argTable[1] << " file name" << endl;
     if (!is_file_exist(argTable[1].c_str()))
     {
         cout << "not exist " << argTable[1].c_str() << endl;
@@ -1513,20 +1569,25 @@ void GetFileTypeCommand::execute()
     output = output + " and takes up " + size + " bytes";
     cout << output << endl;
 }
-
-void ChmodCommand::execute()
+bool ChmodCommand::IsLegal()
 {
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>3)
     {
         cerr<<"smash error: gettype: invalid arguments"<<endl;
-        return;
+        return false;
     }
     if(!isNum(argTable[1]))
     {
         cerr<<"smash error: gettype: invalid arguments"<<endl;
-        return;
+        return false;
     }
+
+}
+void ChmodCommand::execute()
+{
+    std::string argTable[22];
+    numOfWords(cmdLine,argTable);
     const char* filename =  argTable[2].c_str();
     int permissions = std::stoi(argTable[1], nullptr, 8);
     int result = chmod(filename, permissions);
@@ -1585,7 +1646,7 @@ void QuitCommand::execute()
 bool KillCommand::IsLegal()
 {
     std::string arg[22];
-    if(numOfWords(cmdLine,arg) != 3 || arg[1].length() > 3 || arg[1].length() == 1)
+    if(numOfWords(cmdLine,arg) != 3)
     {
         cerr<<"smash error: kill: invalid arguments"<<endl;
         return false;

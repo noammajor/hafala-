@@ -232,6 +232,7 @@ public:
     explicit ChmodCommand(const char* cmd_line): BuiltInCommand(cmd_line) {}
     virtual ~ChmodCommand() {}
     void execute() override;
+    bool IsLegal() override;
 };
 
 class GetFileTypeCommand : public BuiltInCommand {
@@ -239,6 +240,7 @@ public:
     explicit GetFileTypeCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
     virtual ~GetFileTypeCommand() {}
     void execute() override;
+    bool IsLegal() override;
 };
 
 class SetcoreCommand : public BuiltInCommand {
@@ -246,6 +248,7 @@ public:
     explicit SetcoreCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
     virtual ~SetcoreCommand() {}
     void execute() override;
+    bool IsLegal() override;
 };
 
 ///////////////////////////////////////////////  SmallShell   ///////////////////////////////////////////////////////////
