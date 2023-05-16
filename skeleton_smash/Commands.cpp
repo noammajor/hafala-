@@ -997,10 +997,16 @@ void ComplexCommand::execute()
 
 PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
 {
-    curCommand= nullptr;
     string cmd_s = _trim(string(cmdLine));
     char** argTable = new char*[2];
+    bool errorPipe = false;
     splitByArg(cmdLine, '|', argTable);
+    if (cmd_s.find("|&") != string::npos)
+    {
+        errorPipe = true;
+        argTable[1][0] = ' ';
+        _trim(argTable[1]);
+    }
     int fd[2];
     if (pipe(fd) == -1)
     {
@@ -1016,7 +1022,7 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
     {
         if (setpgrp() == -1)
             perror("smash error: setpgrp failed");
-        if (cmd_s.find("|&") != string::npos)
+        if (errorPipe)
         {
             if (dup2(fd[1], 2) == -1) {
                 perror("smash error: dup2 failed");
@@ -1024,10 +1030,10 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
         }
         else
         {
-                if (dup2(fd[1], STDOUT_FILENO) == -1)
-                {
-                    perror("smash error: dup2 failed");
-                }
+            if (dup2(fd[1], STDOUT_FILENO) == -1)
+            {
+                perror("smash error: dup2 failed");
+            }
         }
         if(close(fd[0])==-1)
         {
@@ -1037,15 +1043,14 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
         {
             perror("smash error: close failed");
         }
-        curCommand = SmallShell::getInstance().BuiltIn(argTable[0]);
-        if (!curCommand)
+        command1 = SmallShell::getInstance().BuiltIn(argTable[0]);
+        if (!command1)
         {
             if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
-                curCommand = new ComplexCommand(argTable[0]);
+                command1 = new ComplexCommand(argTable[0]);
             else
-                curCommand = new SimpleCommand(argTable[0]);
+                command1 = new SimpleCommand(argTable[0]);
         }
-        return;
     }
     pid_t child2 = fork();
     if(child2 < 0)
