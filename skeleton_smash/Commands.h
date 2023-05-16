@@ -30,6 +30,7 @@ public:
     virtual ~Command() {}
     virtual void execute() = 0;
     void printComd() const;
+    virtual bool IsLegal();
     //virtual void prepare();
     virtual void cleanup();
     // TODO: Add your extra methods if needed
@@ -100,6 +101,7 @@ public:
     explicit ChangeDirCommand(const char* cmd_line): BuiltInCommand(cmd_line){}
     virtual ~ChangeDirCommand() = default;
     void execute() override;
+    bool IsLegal() override;
 };
 
 class GetCurrDirCommand : public BuiltInCommand {
@@ -131,6 +133,7 @@ public:
     KillCommand(const char* cmd_line, JobsList* jobs):BuiltInCommand(cmd_line),jobs(jobs){};
     virtual ~KillCommand() = default;
     void execute() override;
+    bool IsLegal() override;
 };
 
 
@@ -202,6 +205,7 @@ public:
     ForegroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs){}
     virtual ~ForegroundCommand() {}
     void execute() override;
+    bool IsLegal() override;
 };
 
 class BackgroundCommand : public BuiltInCommand {
@@ -210,6 +214,7 @@ public:
     BackgroundCommand(const char* cmd_line, JobsList* jobs): BuiltInCommand(cmd_line), jobs(jobs){}
     virtual ~BackgroundCommand() {}
     void execute() override;
+    bool IsLegal() override;
 };
 
 class TimeoutCommand : public BuiltInCommand {
