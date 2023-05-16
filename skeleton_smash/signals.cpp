@@ -71,8 +71,13 @@ void alarmHandler(int sig_num) {
                 }
             }
             delete timedOut[i];
-            timedOut.erase(timedOut.begin() + i);
+            timedOut[i] = nullptr;
         }
+    }
+    for (int i = (int)timedOut.size() ; i >= 0 ; i--)
+    {
+        if (!timedOut[i])
+            timedOut.erase(timedOut.begin()+i);
     }
     if (!timedOut.empty())
     {

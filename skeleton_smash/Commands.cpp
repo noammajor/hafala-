@@ -507,6 +507,8 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
 {
 
     string cmd = _trim(cmd_line);
+    if (cmd.empty())
+        return nullptr;
     string firstWord = findCommand(cmd.c_str());
 
     if (cmd.find('>') != string::npos)
@@ -550,11 +552,16 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
 
 void SmallShell::add_timeout(Timeout_obj* newTime)
 {
+    bool set = true;
     time_t min = newTime->alarm_time;
     for (Timeout_obj* obj : timeout)
     {
         if (obj->alarm_time < min)
-            min = obj->alarm_time;
+        {
+            //min = obj->alarm_time;
+            set = true;
+            break;
+        }
     }
     time_t setAlarm = min - time(nullptr);
     alarm(setAlarm);
@@ -622,7 +629,7 @@ bool ChangeDirCommand::IsLegal()
     string args[21];
     if(numOfWords(cmdLine, args) > 2)
     {
-        perror("smash error: cd: too many arguments");
+        cerr<<"smash error: cd: too many arguments"<<endl;
         return false;
     }
     return true;
@@ -633,7 +640,7 @@ void ChangeDirCommand::execute()
     string args[21];
     if(numOfWords(cmdLine, args) > 2)
     {
-        perror("smash error: cd: too many arguments");
+        cerr<<"smash error: cd: too many arguments"<<endl;
         return;
     }
     char* cwd = get_current_dir_name();
@@ -641,7 +648,7 @@ void ChangeDirCommand::execute()
     {
         if (!SmallShell::getInstance().curCD)
         {
-            perror("smash error: cd: OLDPWD not set");
+            cerr<<"smash error: cd: OLDPWD not set"<<endl;
             return;
         }
         const char* prevPath = SmallShell::getInstance().curCD;
@@ -676,25 +683,25 @@ bool ForegroundCommand::IsLegal()
             int pid = stoi(firstArg);
             if (pid <= 0) {
                 string error = "smash error: fg: job-id " + to_string(pid) + " does not exist";
-                perror(error.c_str());
+                cerr<<error<<endl;
                 return false;
             }
             JobsList::JobEntry *job = jobs->getJobById(pid);
             if (!job) {
                 string error = "smash error: fg: job-id " + to_string(pid) + " does not exist";
-                perror(error.c_str());
+               cerr<<error<<endl;
                 return false;
             }
         }
         catch (exception &e) {
-            perror("smash error: fg: invalid arguments");
+            cerr<<"smash error: fg: invalid arguments"<<endl;
         }
     }
     else if (argsCount == 1)
     {
         JobsList::JobEntry *job = jobs->getLastJob();
         if (!job) {
-            perror("jobs list is empty");
+            cerr<<"jobs list is empty"<<endl;
             return false;
         }
     }
@@ -716,7 +723,7 @@ void ForegroundCommand::execute()
             if (!job)
             {
                 string error = "smash error: fg: job-id " + to_string(pid) + " does not exist";
-                perror(error.c_str());
+                cerr<<error<<endl;
                 return;
             }
             jobs->removeJobById(job->getJobId());
@@ -737,7 +744,7 @@ void ForegroundCommand::execute()
         }
         catch (exception &e)
         {
-            perror("smash error: fg: invalid arguments");
+            cerr<<"smash error: fg: invalid arguments"<<endl;
         }
     }
     else if (argsCount == 1)
@@ -745,7 +752,7 @@ void ForegroundCommand::execute()
         JobsList::JobEntry* job = jobs->getLastJob();
         if (!job)
         {
-            perror("jobs list is empty");
+            cerr<<"jobs list is empty"<<endl;
             return;
         }
         jobs->removeJobById(job->getJobId());
@@ -763,7 +770,7 @@ void ForegroundCommand::execute()
     }
     else
     {
-        perror("smash error: fg: invalid arguments");
+        cerr<<"smash error: fg: invalid arguments"<<endl;
     }
 }
 
@@ -779,25 +786,26 @@ bool BackgroundCommand::IsLegal()
         try
         {
             int pid = stoi(firstArg);
-            if (pid <= 0) {
+            if(firstArg.find('-')<firstArg.length())
+            {
                 string error = "smash error: bg: job-id " + to_string(pid) + " does not exist";
-                perror(error.c_str());
+                cerr<<error<<endl;
                 return false;
             }
             JobsList::JobEntry *job = jobs->getJobById(pid);
             if (!job) {
-                string error = "smash error: bg: job-id " + to_string(pid) + " does not exist";
-                perror(error.c_str());
+                string error = "smash error: bg: job-id " + firstArg + " does not exist";
+               cerr<< error<<endl;
                 return false;
             } else if (job->getStat() != stopped) {
-                string error = "smash error: bg: job-id " + to_string(pid) + " is already running in the background";
-                perror(error.c_str());
+                string error = "smash error: bg: job-id " + firstArg + " is already running in the background";
+                cerr<< error<<endl;
                 return false;
             }
         }
         catch (exception & e)
         {
-            perror("smash error: bg: invalid arguments");
+            cerr<<"smash error: bg: invalid arguments"<<endl;
             return false;
         }
 
@@ -806,7 +814,7 @@ bool BackgroundCommand::IsLegal()
     {
         JobsList::JobEntry *job = jobs->getLastStoppedJob();
         if (!job) {
-            perror("smash error: bg: there is no stopped jobs to resume");
+            cerr<<"smash error: bg: there is no stopped jobs to resume"<<endl;
             return false;
         }
     }
@@ -826,20 +834,21 @@ void BackgroundCommand::execute()
             JobsList::JobEntry* job = jobs->getJobById(pid);
             if (!job)
             {
-                string error = "smash error: bg: job-id " + to_string(pid) + " does not exist";
-                perror(error.c_str());
+                string error = "smash error: bg: job-id " + firstArg + " does not exist";
+                cerr<<error<<endl;
                 return;
             }
             jobs->moveToBG(job);
             cout << job->getCmdLine() << " : " << job->getPid() << endl;
-            if(kill(pid, SIGCONT) == -1)
+            if(kill(job->getPid(), SIGCONT) == -1)
             {
                 perror("smash error: kill failed");
             }
         }
         catch (exception &e)
         {
-            perror("smash error: bg: invalid arguments");
+            cerr<<"smash error: bg: invalid arguments"<<endl;
+            return;
         }
     }
     else if (argsCount == 1)
@@ -847,7 +856,7 @@ void BackgroundCommand::execute()
         JobsList::JobEntry* job = jobs->getLastStoppedJob();
         if (!job)
         {
-            perror("smash error: bg: there is no stopped jobs to resume");
+            cerr<<"smash error: bg: there is no stopped jobs to resume"<<endl;
             return;
         }
         jobs->moveToBG(job);
@@ -859,7 +868,7 @@ void BackgroundCommand::execute()
     }
     else
     {
-        perror("smash error: bg: invalid arguments");
+        cerr<<"smash error: bg: invalid arguments"<<endl;
     }
 }
 
@@ -871,6 +880,7 @@ void JobsCommand::execute()
 
 void ExternalCommand::execute()
 {
+    std::string argsTable[22];
     string cmd_s = _trim(cmdLine);
     bool runInBack = _isBackgroundComamnd(cmdLine);
     bool setTimeout = false;
@@ -896,10 +906,14 @@ void ExternalCommand::execute()
         }
         else            //  child_pid > 0
         {
-            if (setTimeout)
+            if (setTimeout && numOfWords(cmdLine,argsTable)>1)
             {
                 Command* timeoutCmd = new TimeoutCommand(cmdLine, child_pid);
                 timeoutCmd->execute();
+            }
+            if(setTimeout && numOfWords(cmdLine,argsTable)==1)
+            {
+                return;
             }
             if (runInBack)
             {
@@ -995,8 +1009,92 @@ void ComplexCommand::execute()
 }
 
 
-void PipeCommand::execute()
-{
+void PipeCommand::execute() {
+    string cmd_s = _trim(string(cmdLine));
+    char **argTable = new char *[2];
+    bool errorPipe = false;
+    splitByArg(cmdLine, '|', argTable);
+    if (cmd_s.find("|&") != string::npos) {
+        errorPipe = true;
+        argTable[1][0] = ' ';
+        _trim(argTable[1]);
+    }
+    int pipefd[2];
+    pid_t pid;
+    if (pipe(pipefd) == -1) {
+        perror("smash error: pipe failed");
+        return;
+    }
+    pid = fork();
+    if (pid < 0) {
+        perror("smash error: fork failed");
+        return;
+    }
+    if (pid != 0) {
+        if (errorPipe) {
+            int prevErr = dup(STDERR_FILENO);
+            close(pipefd[0]);
+            dup2(pipefd[1], STDERR_FILENO);
+            command1 = SmallShell::getInstance().CreateCommand(argTable[0]);
+            command1->execute();
+            dup2(prevErr, STDERR_FILENO);
+            close(pipefd[1]);
+        } else {
+            int prevOut = dup(STDOUT_FILENO);
+            close(pipefd[0]);
+            dup2(pipefd[1], STDOUT_FILENO);
+            command1 = SmallShell::getInstance().CreateCommand(argTable[0]);
+            command1->execute();
+            dup2(prevOut, STDOUT_FILENO);
+            close(pipefd[1]);
+        }
+        waitpid(pid, nullptr, 0);
+    } else {
+        setpgrp();
+        close(pipefd[1]);
+        int previn = dup(STDIN_FILENO);
+        dup2(pipefd[0], STDIN_FILENO);
+        command2 = SmallShell::getInstance().CreateCommand(argTable[1]);
+        command2->execute();
+        dup2(previn, STDIN_FILENO);
+        close(pipefd[0]);
+        exit(0);
+
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /*
     string cmd_s = _trim(string(cmdLine));
     char** argTable = new char*[2];
     bool errorPipe = false;
@@ -1065,7 +1163,7 @@ void PipeCommand::execute()
     }
     exit(0);
 
-    /*pid_t child1 = fork();
+    pid_t child1 = fork();
     if(child1 < 0)
     {
         perror("smash error: fork failed");
@@ -1130,10 +1228,9 @@ void PipeCommand::execute()
         {
             perror("smash error: close failed");
         }
-    }*/
+    }
 }
-
-/*void PipeCommand::cleanup()
+void PipeCommand::cleanup()
 {
     if (pid1 != -1 && pid1 != getpid())
         kill(pid1, SIGKILL);
@@ -1243,7 +1340,7 @@ void SetcoreCommand::execute()
 {
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>3)
-        perror("smash error: setcore: invalid argument");
+        cerr<<"smash error: setcore: invalid argument"<<endl;
     try
     {
         int jobId = stoi(argTable[1]);
@@ -1252,7 +1349,7 @@ void SetcoreCommand::execute()
         if (!job)
         {
             std::string message = "smash error: setcore: job-id " + to_string(jobId) + " does not exist";
-            perror(message.c_str());
+            cerr<<message<<endl;
             return;
         }
         long NumOfCores = sysconf(_SC_NPROCESSORS_ONLN);
@@ -1263,7 +1360,7 @@ void SetcoreCommand::execute()
         }
         if (core < 0 || core >= NumOfCores)
         {
-            perror("smash error: setcore: invalid core number");
+            cerr<<"smash error: setcore: invalid core number"<<endl;
             return;
         }
         cpu_set_t cpuSet;               //Define cpu_set bit mask
@@ -1279,7 +1376,7 @@ void SetcoreCommand::execute()
     }
     catch (...)
     {
-        perror("smash error: setcore: invalid arguments");
+        cout<<"smash error: setcore: invalid arguments"<< endl;
     }
 }
 
@@ -1296,7 +1393,7 @@ void GetFileTypeCommand::execute()
    // cout<<cmdLine<< " cmdline" <<endl;
     if(numOfWords(cmdLine,argTable)>2)
     {
-        perror("smash error: gettype: invalid aruments");
+        cerr<<"smash error: gettype: invalid aruments"<<endl;
         return;
     }
     //cout << argTable[1] << " file name" << endl;
@@ -1308,7 +1405,7 @@ void GetFileTypeCommand::execute()
     struct stat stat_buf;
     if(lstat(argTable[1].c_str(),&stat_buf))
     {
-        perror("smash error: gettype: invalid arguments");
+        perror("smash error: lstat: invalid arguments");
         return;
     }
     std::string type;
@@ -1353,12 +1450,12 @@ void ChmodCommand::execute()
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>3)
     {
-        perror("smash error: gettype: invalid arguments");
+        cerr<<"smash error: gettype: invalid arguments"<<endl;
         return;
     }
     if(!isNum(argTable[1]))
     {
-        perror("smash error: gettype: invalid arguments");
+        cerr<<"smash error: gettype: invalid arguments"<<endl;
         return;
     }
     const char* filename =  argTable[2].c_str();
@@ -1421,7 +1518,7 @@ bool KillCommand::IsLegal()
     std::string arg[22];
     if(numOfWords(cmdLine,arg) != 3 || arg[1].length() > 3 || arg[1].length() == 1)
     {
-        perror("smash error: kill: invalid arguments");
+        cerr<<"smash error: kill: invalid arguments"<<endl;
         return false;
     }
     return true;
@@ -1431,25 +1528,32 @@ void KillCommand::execute()
     SmallShell::getInstance().getJobs()->removeFinishedJobs();
     std::string arg[22];
     std::string sigNum;
-    numOfWords(cmdLine,arg);
+   int amount= numOfWords(cmdLine,arg);
     try
     {
         if (arg[1][0] == '-')
         {
             sigNum = arg[1].substr(1, arg[1].length() - 1);
         }
-        if (!isNum(sigNum) || !isNum(arg[2]))
+        if(amount>2 && arg[2].find('-')<arg[2].length())
         {
-            perror("smash error: kill: invalid arguments");
+            std::string errorMessage = "smash error: kill: job-id " + arg[2] + " does not exist";
+            cerr<<errorMessage<<endl;
             return;
         }
+        if (!isNum(sigNum) || !isNum(arg[2]))
+        {
+            cerr<<"smash error: kill: invalid arguments"<<endl;
+            return;
+        }
+
         JobsList::JobEntry *job = SmallShell::getInstance().getJobs()->getJobById(stoi(arg[2]));
         if (job)
         {
             if (waitpid(job->getPid(), nullptr, WNOHANG) != 0)
             {
                 std::string errorMessage = "smash error: kill: job-id " + arg[2] + " does not exist";
-                perror(errorMessage.c_str());
+                cerr<<errorMessage<<endl;
                 return;
             }
             if(kill(job->getPid(), stoi(sigNum)) == -1)
@@ -1462,12 +1566,12 @@ void KillCommand::execute()
         else
         {
             std::string errorMessage = "smash error: kill: job-id " + arg[2] + " does not exist";
-            perror(errorMessage.c_str());
+            cerr<<errorMessage<<endl;
         }
     }
     catch (...)
     {
-        perror("smash error: kill: invalid arguments");
+        cerr<<"smash error: kill: invalid arguments"<<endl;
     }
 }
 
