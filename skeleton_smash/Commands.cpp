@@ -1577,7 +1577,7 @@ void QuitCommand::execute()
 bool KillCommand::IsLegal()
 {
     std::string arg[22];
-    if(numOfWords(cmdLine,arg) != 3 || arg[1].length() > 3 || arg[1].length() == 1)
+    if(numOfWords(cmdLine,arg) != 3)
     {
         cerr<<"smash error: kill: invalid arguments"<<endl;
         return false;
