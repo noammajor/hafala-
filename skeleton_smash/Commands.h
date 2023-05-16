@@ -75,7 +75,7 @@ public:
     PipeCommand(const char* cmd_line): Command(cmd_line), command1(nullptr), command2(nullptr), pid1(-1), pid2(-1){}
     ~PipeCommand() override = default;
     void execute() override;
-    void cleanup() override;
+    //void cleanup() override;
 };
 
 class RedirectionCommand : public Command {

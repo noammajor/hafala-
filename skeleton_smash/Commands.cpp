@@ -545,94 +545,8 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
 
     else
         return new ExternalCommand(cmd_line);
-
-
-    /*string cmd_s = _trim(string(cmd_line));
-    char* line = new char[cmd_s.length()+1];
-    strcpy(line, cmd_s.c_str());
-    bool runInBack = false;
-    if (_isBackgroundComamnd(cmd_line))
-        runInBack = true;
-    _removeBackgroundSign(line);
-    cmd_s = _trim(line);
-    bool isChild  = false;
-    bool redirectionHappened = false;
-    Command* cmd = nullptr;
-    bool setTimeout = false;
-    string firstWord = cmd_s.substr(0, cmd_s.find(' '));
-    if (firstWord == "timeout")
-    {
-        setTimeout = true;
-    }
-    if(cmd_s.find('>') != string::npos)   //redirection Builtin
-    {
-        redirectionHappened = true;
-        isChild = redirection(cmd_line, setTimeout);
-        if (isChild)
-        {
-            cmd = BuiltIn(cmd_line);
-        }
-    }
-    else if (cmd_s.find('|') != string::npos)
-    {
-        cmd = new PipeCommand(cmd_line);
-    }
-    if(!cmd && redirectionHappened && isChild)      // redirection external
-    {
-        if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
-            cmd = new ComplexCommand(cmd_line);
-        else
-        {
-            cmd = new SimpleCommand(cmd_line);
-        }
-    }
-    if(!cmd && !redirectionHappened)
-    {
-        cmd = BuiltIn(cmd_line);
-        if(!cmd && forkExtrenal(setTimeout, runInBack, cmd_line))
-        {
-            if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
-                cmd = new ComplexCommand(cmd_line);
-            else
-            {
-                cmd = new SimpleCommand(cmd_line);
-            }
-        }
-    }
-    return cmd;*/
 }
 
-
-/*Command* SmallShell::BuiltIn(const char* cmd_line)
-{
-    string firstWord = _trim(cmd_line);
-    firstWord = findCommand(firstWord.c_str());
-    if (firstWord == "chprompt")
-        return new ChpromptCommand(cmd_line);
-    else if (firstWord == "showpid")
-        return new ShowPidCommand(cmd_line);
-    else if (firstWord == "pwd")
-        return new GetCurrDirCommand(cmd_line);
-    else if (firstWord == "cd")
-        return new ChangeDirCommand(cmd_line);
-    else if (firstWord == "jobs")
-        return new JobsCommand(cmd_line, jobsList);
-    else if (firstWord == "fg")
-        return new ForegroundCommand(cmd_line, jobsList);
-    else if (firstWord == "bg")
-        return new BackgroundCommand(cmd_line, jobsList);
-    else if (firstWord == "quit")
-        return new QuitCommand(cmd_line, jobsList);
-    else if (firstWord == "kill")
-        return new KillCommand(cmd_line, jobsList);
-    else if (firstWord == "setcore")
-        return new SetcoreCommand(cmd_line);
-    else if (firstWord == "getfiletype")
-        return new GetFileTypeCommand(cmd_line);
-    else if (firstWord == "chmod")
-        return new ChmodCommand(cmd_line);
-    return nullptr;
-}*/
 
 void SmallShell::add_timeout(Timeout_obj* newTime)
 {
@@ -1124,7 +1038,8 @@ void PipeCommand::execute()
             perror("smash error: dup2 failed");
         }
     }
-    else {
+    else
+    {
         if (dup2(prevOut, 1) == -1) {
             perror("smash error: dup2 failed");
         }
@@ -1133,12 +1048,22 @@ void PipeCommand::execute()
     if (dup2(fd[0], 0) == -1) {
         perror("smash error: dup2 failed");
     }
-    command2 = SmallShell::getInstance().CreateCommand(argTable[0]);
+    command2 = SmallShell::getInstance().CreateCommand(argTable[1]);
+    command2->printComd();
     command2->execute();
 
     if (dup2(prevIn, 0) == -1) {
         perror("smash error: dup2 failed");
     }
+    if(close(fd[0]) == -1)
+    {
+        perror("smash error: close failed");
+    }
+    if(close(fd[1]) == -1)
+    {
+        perror("smash error: close failed");
+    }
+    exit(0);
 
     /*pid_t child1 = fork();
     if(child1 < 0)
@@ -1208,13 +1133,13 @@ void PipeCommand::execute()
     }*/
 }
 
-void PipeCommand::cleanup()
+/*void PipeCommand::cleanup()
 {
     if (pid1 != -1 && pid1 != getpid())
         kill(pid1, SIGKILL);
     if (pid2 != -1 && pid2 != getpid())
         kill(pid2, SIGKILL);
-}
+}*/
 
 
 void RedirectionCommand::execute() {
@@ -1368,13 +1293,20 @@ void GetFileTypeCommand::execute()
 {
     std::string output;
     std::string argTable[22];
+   // cout<<cmdLine<< " cmdline" <<endl;
     if(numOfWords(cmdLine,argTable)>2)
     {
         perror("smash error: gettype: invalid aruments");
         return;
     }
+    //cout << argTable[1] << " file name" << endl;
+    if (!is_file_exist(argTable[1].c_str()))
+    {
+        cout << "not exist " << argTable[1].c_str() << endl;
+        return;
+    }
     struct stat stat_buf;
-    if(lstat(argTable[1].c_str(),&stat_buf)))
+    if(lstat(argTable[1].c_str(),&stat_buf))
     {
         perror("smash error: gettype: invalid arguments");
         return;
