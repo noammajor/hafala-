@@ -36,61 +36,6 @@ std::string fileNameOpen(const char* cmd_line)
     }
 }
 
-bool redirection(const char* cmd_line, bool setTimeout)
-{
-    string line = cmd_line;
-    bool append = false;
-    if (line.find(">>") != string::npos)
-        append = true;
-    std::string directFile= fileNameOpen(cmd_line);
-    pid_t child = fork();
-    if (child < 0)
-    {
-        perror("smash error: fork failed");
-    }
-    else if (child == 0)
-    {
-        if(setpgrp()==-1)
-        {
-            perror("smash error: setpgrp failed");
-        }
-        int fd;
-        if (append)
-        {
-            fd = open(directFile.c_str(), O_APPEND|O_CREAT|O_WRONLY, 0655);
-        }
-        if (!(append))
-        {
-            fd = open(directFile.c_str(), O_TRUNC|O_CREAT|O_WRONLY, 0655);
-        }
-        if (fd < 0)
-        {
-            perror("Cannot open file"); ///not defined in the project
-        }
-        if(dup2(fd, STDOUT_FILENO) == -1)
-        {
-            perror("smash error: dup2 failed");
-        }
-        if (fd > 0)
-        {
-            if (close(fd) == -1)
-                perror("smash error: close failed");
-        }
-        return true;
-    }
-    else     // child > 0
-    {
-        if (setTimeout)
-        {
-            Command* timeoutCmd = new TimeoutCommand(cmd_line, child);
-            timeoutCmd->execute();
-        }
-        int status;
-        if (waitpid(child, &status, WUNTRACED) < 0)
-            perror("smash error: waitpid failed");
-    }
-    return false;
-}
 
 string _ltrim(const std::string& s)
 {
@@ -560,7 +505,49 @@ JobsList* SmallShell::getJobs()
 */
 Command* SmallShell::CreateCommand(const char* cmd_line)
 {
-    string cmd_s = _trim(string(cmd_line));
+
+    string cmd = _trim(cmd_line);
+    string firstWord = findCommand(cmd.c_str());
+
+    if (cmd.find('>') != string::npos)
+    {
+        return new RedirectionCommand(cmd_line);
+    }
+    else if (cmd.find('|') != string::npos)
+    {
+        return new PipeCommand(cmd_line);
+    }
+
+    else if (firstWord == "chprompt")
+        return new ChpromptCommand(cmd_line);
+    else if (firstWord == "showpid")
+        return new ShowPidCommand(cmd_line);
+    else if (firstWord == "pwd")
+        return new GetCurrDirCommand(cmd_line);
+    else if (firstWord == "cd")
+        return new ChangeDirCommand(cmd_line);
+    else if (firstWord == "jobs")
+        return new JobsCommand(cmd_line, jobsList);
+    else if (firstWord == "fg")
+        return new ForegroundCommand(cmd_line, jobsList);
+    else if (firstWord == "bg")
+        return new BackgroundCommand(cmd_line, jobsList);
+    else if (firstWord == "quit")
+        return new QuitCommand(cmd_line, jobsList);
+    else if (firstWord == "kill")
+        return new KillCommand(cmd_line, jobsList);
+    else if (firstWord == "setcore")
+        return new SetcoreCommand(cmd_line);
+    else if (firstWord == "getfiletype")
+        return new GetFileTypeCommand(cmd_line);
+    else if (firstWord == "chmod")
+        return new ChmodCommand(cmd_line);
+
+    else
+        return new ExternalCommand(cmd_line);
+
+
+    /*string cmd_s = _trim(string(cmd_line));
     char* line = new char[cmd_s.length()+1];
     strcpy(line, cmd_s.c_str());
     bool runInBack = false;
@@ -612,51 +599,11 @@ Command* SmallShell::CreateCommand(const char* cmd_line)
             }
         }
     }
-    return cmd;
+    return cmd;*/
 }
 
-bool SmallShell::forkExtrenal(bool setTimeout, bool runInBack, const char* cmd_line)
-{
-    pid_t child_pid = fork();
-    if(child_pid < 0)
-    {
-        perror("smash error: fork failed");
-    }
-    else if(child_pid == 0)
-    {
-       if(setpgrp()==-1)
-       {
-           perror("smash error: setpgrp failed");
-       }
-        return true;
-    }
-    else            //  child_pid > 0
-    {
-        if (setTimeout)
-        {
-            Command* timeoutCmd = new TimeoutCommand(cmd_line, child_pid);
-            timeoutCmd->execute();
-        }
-        if (runInBack)
-        {
-            SmallShell::getInstance().getJobs()->addJob(cmd_line, child_pid,false);
-           // cout << "run in back " << cmd_line << endl;
-        }
-        else
-        {
-            JobsList::JobEntry* job = new JobsList::JobEntry(forground, -1, child_pid, cmd_line);
-            SmallShell::getInstance().getJobs()->addToFG(job);
-            int status;
-            if(waitpid(child_pid, &status, WUNTRACED)==-1)
-            {
-                perror("smash error: waitpid failed");
-            }
-        }
-    }
-    return false;
-}
 
-Command* SmallShell::BuiltIn(const char* cmd_line)
+/*Command* SmallShell::BuiltIn(const char* cmd_line)
 {
     string firstWord = _trim(cmd_line);
     firstWord = findCommand(firstWord.c_str());
@@ -685,7 +632,7 @@ Command* SmallShell::BuiltIn(const char* cmd_line)
     else if (firstWord == "chmod")
         return new ChmodCommand(cmd_line);
     return nullptr;
-}
+}*/
 
 void SmallShell::add_timeout(Timeout_obj* newTime)
 {
@@ -929,6 +876,64 @@ void JobsCommand::execute()
     SmallShell::getInstance().getJobs()->printJobsList();
 }
 
+void ExternalCommand::execute()
+{
+    string cmd_s = _trim(cmdLine);
+    bool runInBack = _isBackgroundComamnd(cmdLine);
+    bool setTimeout = false;
+    string firstWord = cmd_s.substr(0, cmd_s.find(' '));
+    if (firstWord == "timeout")
+    {
+        setTimeout = true;
+    }
+
+    if (getpid() == SmallShell::getInstance().smashPid)
+    {
+        pid_t child_pid = fork();
+        if(child_pid < 0)
+        {
+            perror("smash error: fork failed");
+        }
+        else if(child_pid == 0)
+        {
+            if(setpgrp() == -1)
+            {
+                perror("smash error: setpgrp failed");
+            }
+        }
+        else            //  child_pid > 0
+        {
+            if (setTimeout)
+            {
+                Command* timeoutCmd = new TimeoutCommand(cmdLine, child_pid);
+                timeoutCmd->execute();
+            }
+            if (runInBack)
+            {
+                SmallShell::getInstance().getJobs()->addJob(cmdLine, child_pid,false);
+            }
+            else
+            {
+                JobsList::JobEntry* job = new JobsList::JobEntry(forground, -1, child_pid, cmdLine);
+                SmallShell::getInstance().jobsList->FGround = job;
+                if(waitpid(child_pid, nullptr, WUNTRACED) == -1)
+                {
+                    perror("smash error: waitpid failed");
+                }
+            }
+        }
+    }
+    if (getpid() != SmallShell::getInstance().smashPid)
+    {
+        Command* command;
+        string str(cmdLine);
+        if (str.find('*') != string::npos || str.find('?') != string::npos)
+            command =  new ComplexCommand(cmdLine);
+        else
+            command = new SimpleCommand(cmdLine);
+        command->execute();
+    }
+}
 
 void SimpleCommand::execute()
 {
@@ -958,6 +963,7 @@ void SimpleCommand::execute()
     perror("smash error: execvp failed");
     exit(errno);
 }
+
 
 void ComplexCommand::execute()
 {
@@ -995,7 +1001,8 @@ void ComplexCommand::execute()
         exit(errno);
 }
 
-PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
+
+void PipeCommand::execute()
 {
     string cmd_s = _trim(string(cmdLine));
     char** argTable = new char*[2];
@@ -1013,6 +1020,7 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
         perror("smash error: pipe failed");
         return;
     }
+
     pid_t child1 = fork();
     if(child1 < 0)
     {
@@ -1022,6 +1030,7 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
     {
         if (setpgrp() == -1)
             perror("smash error: setpgrp failed");
+        cout << "child 1 " <<argTable[0] << endl;
         if (errorPipe)
         {
             if (dup2(fd[1], 2) == -1) {
@@ -1035,22 +1044,17 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
                 perror("smash error: dup2 failed");
             }
         }
-        if(close(fd[0])==-1)
+        if(close(fd[0]) == -1)
         {
             perror("smash error: close failed");
         }
-        if(close(fd[1])==-1)
+        if(close(fd[1]) == -1)
         {
             perror("smash error: close failed");
         }
-        command1 = SmallShell::getInstance().BuiltIn(argTable[0]);
-        if (!command1)
-        {
-            if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
-                command1 = new ComplexCommand(argTable[0]);
-            else
-                command1 = new SimpleCommand(argTable[0]);
-        }
+        cout << "execute 1 " <<argTable[0] << endl;
+        command1 = SmallShell::getInstance().CreateCommand(argTable[0]);
+        command1->execute();
     }
     pid_t child2 = fork();
     if(child2 < 0)
@@ -1059,31 +1063,86 @@ PipeCommand::PipeCommand(const char* cmd_line): Command(cmd_line)
     }
     if (child2 == 0)        //second command
     {
-        setpgrp();
+        setpgrp();     //////////////////////////////////////////////////////////////////////////////////syscall errors
+        cout << "child 2 " <<argTable[1] << endl;
         dup2(fd[0], 0);
-        curCommand = SmallShell::getInstance().BuiltIn(argTable[1]);
-        if (!curCommand)
+        if(close(fd[0]) == -1)
         {
-            if (cmd_s.find('*') != string::npos || cmd_s.find('?') != string::npos)
-                curCommand = new ComplexCommand(argTable[1]);
-            else
-                curCommand = new SimpleCommand(argTable[1]);
+            perror("smash error: close failed");
         }
+        if(close(fd[1]) == -1)
+        {
+            perror("smash error: close failed");
+        }
+        cout << "execute 2 " << argTable[1] << endl;
+        command2 = SmallShell::getInstance().CreateCommand(argTable[1]);
+        command2->execute();
     }
-    if(close(fd[0]) == -1)
+    else
     {
-        perror("smash error: close failed");
-    }
-    if(close(fd[1]) == -1)
-    {
-        perror("smash error: close failed");
+        pid1 = child1;
+        pid2 = child2;
+        if(close(fd[0]) == -1)
+        {
+            perror("smash error: close failed");
+        }
+        if(close(fd[1]) == -1)
+        {
+            perror("smash error: close failed");
+        }
     }
 }
 
-void PipeCommand::execute()
+void PipeCommand::cleanup()
 {
-    if (curCommand)
-        curCommand->execute();
+    if (pid1 != -1 && pid1 != getpid())
+        kill(pid1, SIGKILL);
+    if (pid2 != -1 && pid2 != getpid())
+        kill(pid2, SIGKILL);
+}
+
+
+void RedirectionCommand::execute()
+{
+    string line = cmdLine;
+    bool append = false;
+    if (line.find(">>") != string::npos)
+        append = true;
+    std::string directFile = fileNameOpen(cmdLine);
+
+    char** args = new char*[2];
+    splitByArg(cmdLine, '>', args);
+    Command* command = SmallShell::getInstance().CreateCommand(args[0]);
+
+    if (command)
+    {
+        int prevOut = dup(1);
+        int fd;
+        if (append)
+        {
+            fd = open(directFile.c_str(), O_APPEND|O_CREAT|O_WRONLY, 0655);
+        }
+        if (!(append))
+        {
+            fd = open(directFile.c_str(), O_TRUNC|O_CREAT|O_WRONLY, 0655);
+        }
+        if (fd < 0)
+        {
+            perror("Cannot open file"); ///not defined in the project
+        }
+        if(dup2(fd, STDOUT_FILENO) == -1)
+        {
+            perror("smash error: dup2 failed");
+        }
+        if (fd > 0)
+        {
+            if (close(fd) == -1)
+                perror("smash error: close failed");
+        }
+        command->execute();
+        dup2(prevOut, 1);
+        close(prevOut);  //////////////////////////////////////////////////////////////////syscall errors
+    }
 }
 
 void SetcoreCommand::execute()

@@ -46,7 +46,7 @@ class ExternalCommand : public Command {
 public:
     explicit ExternalCommand(const char* cmd_line): Command(cmd_line){}
     virtual ~ExternalCommand() {}
-    virtual void execute() = 0;
+    virtual void execute();
 };
 
 class SimpleCommand : public ExternalCommand
@@ -68,10 +68,22 @@ public:
 class PipeCommand : public Command {
     Command* command1;
     Command* command2;
+    pid_t pid1;
+    pid_t pid2;
 public:
-    PipeCommand(const char* cmd_line);
+    PipeCommand(const char* cmd_line): Command(cmd_line), command1(nullptr), command2(nullptr), pid1(-1), pid2(-1){}
     ~PipeCommand() override = default;
     void execute() override;
+    void cleanup() override;
+};
+
+class RedirectionCommand : public Command {
+public:
+    explicit RedirectionCommand(const char* cmd_line): Command(cmd_line){}
+    ~RedirectionCommand() override = default;
+    void execute() override;
+    //void prepare() override;
+    //void cleanup() override;
 };
 
 ///////////////////////////////////////////////  BuiltInCommands   ///////////////////////////////////////////////////////////
