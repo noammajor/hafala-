@@ -168,10 +168,10 @@ int numOfWords(const char* cmd_line, string* argsTable)
 const char* removeTimeout(const char* cmd_line)
 {
     string line = _trim(cmd_line);
-    string timeoutWord = "timeoutWord";
-    string* result = new string;
-    int i = timeoutWord.length();
-    for ( ;  i < (int)line.length() ; i++)
+    //string timeoutWord = "timeout";
+    string cmd_s(cmd_line);
+    //int i = timeoutWord.length();*/
+    /*for ( ;  i < (int)line.length() ; i++)
     {
         if (!strcmp(&line[i], " "))
             break;
@@ -185,12 +185,10 @@ const char* removeTimeout(const char* cmd_line)
     {
         if (!strcmp(&line[i], " "))
             break;
-    }
-    for (;  i < (int)line.length() ; i++)
-    {
-        result += line[i];
-    }
-    return result->c_str();
+    }*/
+    /*string result = cmd_s.substr(0, cmd_s.length());
+    cout << result << " before return" << endl;
+    return result.c_str();
 }
 
 string findCommand(const char* cmd_line)
@@ -984,7 +982,7 @@ void ExternalCommand::execute()
     {
         Command* command;
         string str(cmdLine);
-        if (setTimeout)
+        /*if (setTimeout)
         {
             const char* cmd = removeTimeout(cmdLine);
             cout << cmd  << " removed command" << endl;
@@ -994,12 +992,12 @@ void ExternalCommand::execute()
                 command = new SimpleCommand(cmd);
         }
         else
-        {
+        {*/
             if (str.find('*') != string::npos || str.find('?') != string::npos)
                 command =  new ComplexCommand(cmdLine);
             else
                 command = new SimpleCommand(cmdLine);
-        }
+        //}
         //command->printComd();   ////////////////////////////////////////////////////////////
         command->execute();
     }
@@ -1126,182 +1124,6 @@ void PipeCommand::execute() {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /*
-    string cmd_s = _trim(string(cmdLine));
-    char** argTable = new char*[2];
-    bool errorPipe = false;
-    splitByArg(cmdLine, '|', argTable);
-    if (cmd_s.find("|&") != string::npos)
-    {
-        errorPipe = true;
-        argTable[1][0] = ' ';
-        _trim(argTable[1]);
-    }
-
-    int prevIn = dup(0);
-    int prevOut = dup(1);
-    int prevErr = dup(2);
-    int fd[2];
-    if (pipe(fd) == -1)
-    {
-        perror("smash error: pipe failed");
-        return;
-    }
-
-    if (errorPipe)
-    {
-        if (dup2(fd[1], 2) == -1) {
-            perror("smash error: dup2 failed");
-        }
-    }
-    else {
-        if (dup2(fd[1], 1) == -1) {
-            perror("smash error: dup2 failed");
-        }
-    }
-    command1 = SmallShell::getInstance().CreateCommand(argTable[0]);
-    command1->execute();
-
-    if (errorPipe)
-    {
-        if (dup2(prevErr, 2) == -1) {
-            perror("smash error: dup2 failed");
-        }
-    }
-    else
-    {
-        if (dup2(prevOut, 1) == -1) {
-            perror("smash error: dup2 failed");
-        }
-    }
-
-    if (dup2(fd[0], 0) == -1) {
-        perror("smash error: dup2 failed");
-    }
-    command2 = SmallShell::getInstance().CreateCommand(argTable[1]);
-    command2->printComd();
-    command2->execute();
-
-    if (dup2(prevIn, 0) == -1) {
-        perror("smash error: dup2 failed");
-    }
-    if(close(fd[0]) == -1)
-    {
-        perror("smash error: close failed");
-    }
-    if(close(fd[1]) == -1)
-    {
-        perror("smash error: close failed");
-    }
-    exit(0);
-
-    pid_t child1 = fork();
-    if(child1 < 0)
-    {
-        perror("smash error: fork failed");
-    }
-    else if (child1 == 0)        //first command
-    {
-        if (setpgrp() == -1)
-            perror("smash error: setpgrp failed");
-        if (errorPipe)
-        {
-            if (dup2(fd[1], 2) == -1) {
-                perror("smash error: dup2 failed");
-            }
-        }
-        else
-        {
-            if (dup2(fd[1], STDOUT_FILENO) == -1)
-            {
-                perror("smash error: dup2 failed");
-            }
-        }
-        if(close(fd[0]) == -1)
-        {
-            perror("smash error: close failed");
-        }
-        if(close(fd[1]) == -1)
-        {
-            perror("smash error: close failed");
-        }
-        command1 = SmallShell::getInstance().CreateCommand(argTable[0]);
-        command1->execute();
-    }
-    pid_t child2 = fork();
-    if(child2 < 0)
-    {
-        perror("smash error: fork failed");
-    }
-    if (child2 == 0)        //second command
-    {
-        setpgrp();     //////////////////////////////////////////////////////////////////////////////////syscall errors
-        dup2(fd[0], 0);
-        if(close(fd[0]) == -1)
-        {
-            perror("smash error: close failed");
-        }
-        if(close(fd[1]) == -1)
-        {
-            perror("smash error: close failed");
-        }
-        command2 = SmallShell::getInstance().CreateCommand(argTable[1]);
-        command2->execute();
-    }
-    else
-    {
-        pid1 = child1;
-        pid2 = child2;
-        if(close(fd[0]) == -1)
-        {
-            perror("smash error: close failed");
-        }
-        if(close(fd[1]) == -1)
-        {
-            perror("smash error: close failed");
-        }
-    }
-}
-void PipeCommand::cleanup()
-{
-    if (pid1 != -1 && pid1 != getpid())
-        kill(pid1, SIGKILL);
-    if (pid2 != -1 && pid2 != getpid())
-        kill(pid2, SIGKILL);
-}*/
-
-
 void RedirectionCommand::execute() {
     string line = cmdLine;
     bool append = false;
@@ -1344,61 +1166,6 @@ void RedirectionCommand::execute() {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /*
-    string line = cmdLine;
-    bool append = false;
-    if (line.find(">>") != string::npos)
-        append = true;
-    std::string directFile = fileNameOpen(cmdLine);
-
-    char** args = new char*[2];
-    splitByArg(cmdLine, '>', args);
-    Command* command = SmallShell::getInstance().CreateCommand(args[0]);
-
-    if (command)
-    {
-        int prevOut = dup(1);
-        int fd;
-        if (append)
-        {
-            fd = open(directFile.c_str(), O_APPEND|O_CREAT|O_WRONLY, 0655);
-        }
-        if (!(append))
-        {
-            fd = open(directFile.c_str(), O_TRUNC|O_CREAT|O_WRONLY, 0655);
-        }
-        if (fd < 0)
-        {
-            perror("Cannot open file"); ///not defined in the project
-        }
-        if(dup2(fd, STDOUT_FILENO) == -1)
-        {
-            perror("smash error: dup2 failed");
-        }
-        if (fd > 0)
-        {
-            if (close(fd) == -1)
-                perror("smash error: close failed");
-        }
-        command->execute();
-        dup2(prevOut, 1);
-        close(prevOut);  //////////////////////////////////////////////////////////////////syscall errors
-    }
-}
-*/
 bool SetcoreCommand::IsLegal()
 {
     std::string argTable[22];
@@ -1407,9 +1174,26 @@ bool SetcoreCommand::IsLegal()
         cerr<<"smash error: setcore: invalid argument"<<endl;
         return false;
     }
+    try
+    {
+        int jobId = stoi(argTable[1]);
+        JobsList::JobEntry* job = SmallShell::getInstance().getJobs()->getJobById(jobId);
+        if (!job)
+        {
+            std::string message = "smash error: setcore: job-id " + argTable[1] + " does not exist";
+            cerr << message <<endl;
+            return false;
+        }
+    }
+    catch (...)
+    {
+        std::string message = "smash error: setcore: job-id " + argTable[1] + " does not exist";
+        cerr << message <<endl;
+        return false;
+    }
     if(argTable[1].find('-')<argTable[1].length())
     {
-        std::string message = "smash error: setcore: job-id " + to_string(jobId) + " does not exist";
+        std::string message = "smash error: setcore: job-id " + argTable[1] + " does not exist";
         cerr<<message<<endl;
         return false;
     }
@@ -1418,48 +1202,29 @@ bool SetcoreCommand::IsLegal()
         cerr<<"smash error: setcore: invalid core number"<< endl;
         return false;
     }
-    try
-    {
-        int jobId = stoi(argTable[1]);
-    }
-    catch (...)
-    {
-        std::string message = "smash error: setcore: job-id " + to_string(jobId) + " does not exist";
-        cerr << message <<endl;
-        return false;
-    }
+    long NumOfCores = sysconf(_SC_NPROCESSORS_ONLN);
     try
     {
         int core = stoi(argTable[2]);
+        if (core < 0 || core >= NumOfCores)
+        {
+            cerr<<"smash error: setcore: invalid core number"<<endl;
+            return false;
+        }
     }
     catch(...)
     {
         cerr<<"smash error: setcore: invalid core number"<<endl;
-        return;
+        return false;
     }
-
-        JobsList::JobEntry* job = SmallShell::getInstance().getJobs()->getJobById(jobId);
-        if (!job)
-        {
-            std::string message = "smash error: setcore: job-id " + to_string(jobId) + " does not exist";
-            cerr << message <<endl;
-            return false;
-        }
-    }
-    long NumOfCores = sysconf(_SC_NPROCESSORS_ONLN);
     if (NumOfCores == -1)
     {
         perror("smash error: sysconfig failed");
         return false;
     }
-    if (core < 0 || core >= NumOfCores)
-    {
-        cerr<<"smash error: setcore: invalid core number"<<endl;
-        return false;
-    }
-
-
+    return true;
 }
+
 void SetcoreCommand::execute()
 {
     std::string argTable[22];
@@ -1503,6 +1268,7 @@ bool is_file_exist(const char *fileName)
     std::ifstream infile(fileName);
     return infile.good();
 }
+
 bool GetFileTypeCommand::IsLegal()
 {
     std::string argTable[22];
@@ -1511,8 +1277,9 @@ bool GetFileTypeCommand::IsLegal()
         cerr<<"smash error: gettype: invalid aruments"<<endl;
         return false;
     }
-
+    return true;
 }
+
 void GetFileTypeCommand::execute()
 {
     std::string output;
@@ -1569,6 +1336,7 @@ void GetFileTypeCommand::execute()
     output = output + " and takes up " + size + " bytes";
     cout << output << endl;
 }
+
 bool ChmodCommand::IsLegal()
 {
     std::string argTable[22];
@@ -1582,8 +1350,9 @@ bool ChmodCommand::IsLegal()
         cerr<<"smash error: gettype: invalid arguments"<<endl;
         return false;
     }
-
+    return true;
 }
+
 void ChmodCommand::execute()
 {
     std::string argTable[22];
