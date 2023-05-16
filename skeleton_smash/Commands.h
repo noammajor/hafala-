@@ -218,9 +218,8 @@ public:
 };
 
 class TimeoutCommand : public BuiltInCommand {
-    pid_t commandPid;
 public:
-    TimeoutCommand(const char* cmd_line, pid_t pid): BuiltInCommand(cmd_line), commandPid(pid){}
+    TimeoutCommand(const char* cmd_line, pid_t pid): BuiltInCommand(cmd_line){}
     virtual ~TimeoutCommand() {}
     void execute() override;
     bool IsLegal() override;

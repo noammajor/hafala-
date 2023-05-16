@@ -599,9 +599,8 @@ void SmallShell::add_timeout(Timeout_obj* newTime)
     time_t min = newTime->alarm_time;
     for (Timeout_obj* obj : timeout)
     {
-        if (obj->alarm_time < min)
+        if (obj->alarm_time < min && obj->alarm_time > time(NULL))
         {
-            //min = obj->alarm_time;
             set = false;
             break;
         }
@@ -629,7 +628,8 @@ void SmallShell::executeCommand(const char *cmd_line)
     {
         return;
     }
-    if (command->IsLegal()) {
+    if (command->IsLegal())
+    {
         command->execute();
         command->cleanup();
     }
@@ -926,13 +926,7 @@ void ExternalCommand::execute()
     std::string argsTable[22];
     string cmd_s = _trim(cmdLine);
     bool runInBack = _isBackgroundComamnd(cmdLine);
-    bool setTimeout = false;
     string firstWord = cmd_s.substr(0, cmd_s.find(' '));
-    if (firstWord == "timeout")
-    {
-        setTimeout = true;
-    }
-
     if (getpid() == SmallShell::getInstance().smashPid)
     {
         pid_t child_pid = fork();
@@ -949,18 +943,6 @@ void ExternalCommand::execute()
         }
         else            //  child_pid > 0
         {
-            if (setTimeout && numOfWords(cmdLine,argsTable)>1)
-            {
-                if (isNum(argsTable[1]))
-                {
-                    Command* timeoutCmd = new TimeoutCommand(cmdLine, child_pid);
-                    timeoutCmd->execute();
-                }
-            }
-            if(setTimeout && numOfWords(cmdLine,argsTable)==1)
-            {
-                return;
-            }
             if (runInBack)
             {
                 SmallShell::getInstance().getJobs()->addJob(cmdLine, child_pid,false);
@@ -980,23 +962,10 @@ void ExternalCommand::execute()
     {
         Command* command;
         string str(cmdLine);
-        /*if (setTimeout)
-        {
-            const char* cmd = removeTimeout(cmdLine);
-            cout << cmd  << " removed command" << endl;
-            if (str.find('*') != string::npos || str.find('?') != string::npos)
-                command =  new ComplexCommand(cmd);
-            else
-                command = new SimpleCommand(cmd);
-        }
-        else
-        {*/
         if (str.find('*') != string::npos || str.find('?') != string::npos)
             command =  new ComplexCommand(cmdLine);
         else
             command = new SimpleCommand(cmdLine);
-        //}
-        //command->printComd();   ////////////////////////////////////////////////////////////
         command->execute();
     }
 }
@@ -1475,30 +1444,77 @@ void KillCommand::execute()
 
 bool TimeoutCommand::IsLegal()
 {
-
+    std::string args[22];
+    int arsCnt = numOfWords(cmdLine,args);
+    int timeout;
+    if (arsCnt < 3)
+    {
+        cerr << "smash error: timeout: invalid arguments" << endl;
+        return false;
+    }
+    try
+    {
+        timeout = stoi(args[1]);
+        if(timeout <= 0)
+        {
+            cerr << "smash error: timeout: invalid arguments" << endl;
+            return false;
+        }
+    }
+    catch (...)
+    {
+        std::cerr<<"smash error: timeout: invalid arguments"<<endl;
+        return false;
+    }
+    return true;
 }
 
 void TimeoutCommand::execute()
 {
     std::string argTable[22];
+    numOfWords(cmdLine, argTable);
     string line = cmdLine;
-    int i = 0;
-    for ( ; i < (int)line.length() ; i++)
-    {
-        if (isdigit(line[i]))
-            break;
+    int pos = (int) line.find(argTable[1]) + argTable[1].length();
+    string cmd = line.substr(pos);
+    cmd = _trim(cmd);
+
+    pid_t child_pid = fork();
+    if (child_pid < 0) {
+        perror("smash error: fork failed");
     }
-    string number;
-    for ( ; i < (int)line.length() && isdigit(line[i]) ; i++)
+    else if (child_pid == 0)
     {
-        number += line[i];
+        if (setpgrp() == -1)
+        {
+            perror("smash error: setpgrp failed");
+        }
+        Command *command;
+        command = SmallShell::getInstance().CreateCommand(cmd.c_str());
+        if (command)
+            command->execute();
     }
-    number += '\0';
-    int alarmTime = stoi(number);
-    //alarm(alarmTime);
-    Timeout_obj* timeout = new Timeout_obj;
-    timeout->timeout_pid = commandPid;
-    timeout->alarm_time = time(nullptr) + alarmTime;
-    timeout->cmd_line = cmdLine;
-    SmallShell::getInstance().add_timeout(timeout);
+    else            //  child_pid > 0
+    {
+        int alarmTime = stoi(argTable[1]);
+        Timeout_obj* timeout = new Timeout_obj;
+        timeout->timeout_pid = child_pid;
+        timeout->alarm_time = time(nullptr) + alarmTime;
+        timeout->cmd_line = cmdLine;
+        SmallShell::getInstance().add_timeout(timeout);
+
+        if (_isBackgroundComamnd(cmdLine))
+        {
+            SmallShell::getInstance().getJobs()->addJob(cmdLine, child_pid, false);
+        }
+        else
+        {
+            JobsList::JobEntry *job = new JobsList::JobEntry(forground, -1, child_pid, cmd.c_str());
+            SmallShell::getInstance().jobsList->FGround = job;
+
+            if (waitpid(child_pid, nullptr, WUNTRACED) == -1)
+            {
+                perror("smash error: waitpid failed");
+            }
+        }
+    }
 }
