@@ -1307,16 +1307,16 @@ void ChmodCommand::execute()
     try
     {
         int permissions = std::stoi(argTable[1], nullptr, 8);
+        int result = chmod(filename, permissions);
+        if(result < 0)
+        {
+            perror("smash error: chmod failed");
+        }
     }
     catch (...)
     {
         cerr<<"smash error: chmod: invalid arguments"<<endl;
         return;
-    }
-    int result = chmod(filename, permissions);
-    if(result < 0)
-    {
-        perror("smash error: chmod failed");
     }
 }
 
