@@ -1240,7 +1240,7 @@ bool is_file_exist(const char *fileName)
 bool GetFileTypeCommand::IsLegal()
 {
     std::string argTable[22];
-    if(numOfWords(cmdLine,argTable)>2)
+    if(numOfWords(cmdLine,argTable)!=2)
     {
         cerr<<"smash error: getfiletype: invalid aruments"<<endl;
         return false;
@@ -1254,7 +1254,7 @@ void GetFileTypeCommand::execute()
     std::string argTable[22];
     numOfWords(cmdLine,argTable)
     struct stat stat_buf;
-    if(lstat(argTable[1],&stat_buf))
+    if(stat(argTable[1],&stat_buf))
     {
         perror("smash error: lstat: invalid arguments");
         return;
