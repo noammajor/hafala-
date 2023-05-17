@@ -705,7 +705,7 @@ bool ForegroundCommand::IsLegal()
     {
         JobsList::JobEntry *job = jobs->getLastJob();
         if (!job) {
-            cerr<<"jobs list is empty"<<endl;
+            cerr<<"smash error: fg: jobs list is empty"<<endl;
             return false;
         }
     }
