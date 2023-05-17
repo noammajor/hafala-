@@ -1309,6 +1309,11 @@ bool ChmodCommand::IsLegal()
         cerr<<"smash error: chmod: invalid arguments"<<endl;
         return false;
     }
+    if(argTable[1].length()>4)
+    {
+        cerr<<"smash error: chmod: invalid arguments"<<endl;
+        return false;
+    }
     struct stat sb;
     if (stat(argTable[2].c_str(), &sb) != 0)
     {
@@ -1323,7 +1328,15 @@ void ChmodCommand::execute()
     std::string argTable[22];
     numOfWords(cmdLine,argTable);
     const char* filename =  argTable[2].c_str();
-    int permissions = std::stoi(argTable[1], nullptr, 8);
+    try
+    {
+        int permissions = std::stoi(argTable[1], nullptr, 8);
+    }
+    catch (...)
+    {
+        cerr<<"smash error: chmod: invalid arguments"<<endl;
+        return;
+    }
     int result = chmod(filename, permissions);
     if(result < 0)
     {
