@@ -6,6 +6,5 @@ sleep 1 | showpid
 
 cat my_pid
 rm my_pid
-cat my_pid
 
 quit

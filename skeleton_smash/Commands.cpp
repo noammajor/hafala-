@@ -1309,12 +1309,18 @@ bool ChmodCommand::IsLegal()
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>3)
     {
-        cerr<<"smash error: gettype: invalid arguments"<<endl;
+        cerr<<"smash error: chmod: invalid arguments"<<endl;
         return false;
     }
     if(!isNum(argTable[1]))
     {
-        cerr<<"smash error: gettype: invalid arguments"<<endl;
+        cerr<<"smash error: chmod: invalid arguments"<<endl;
+        return false;
+    }
+    struct stat sb;
+    if (stat(argTable[2].c_str(), &sb) != 0)
+    {
+        cerr<<"smash error: chmod: invalid arguments"<<endl;
         return false;
     }
     return true;
@@ -1387,6 +1393,23 @@ bool KillCommand::IsLegal()
         cerr<<"smash error: kill: invalid arguments"<<endl;
         return false;
     }
+    string sig = "";
+    string jobid = "";
+    for  (int i = 1 ; i < (int)arg[1].length() ; i++)
+        sig += arg[1][i];
+    for  (int i = 1 ; i < (int)arg[2].length() ; i++)
+        jobid += arg[2][i];
+    if (arg[2][0] == '-' && isNum(jobid))
+    {
+        std::string errorMessage = "smash error: kill: job-id " + arg[2] + " does not exist";
+        cerr<<errorMessage<<endl;
+        return false;
+    }
+    if (arg[1][0] != '-' || arg[1].length() == 1  || !isNum(sig) || !isNum(arg[2]))
+    {
+        cerr<<"smash error: kill: invalid arguments"<<endl;
+        return false;
+    }
     return true;
 }
 
@@ -1395,14 +1418,14 @@ void KillCommand::execute()
     SmallShell::getInstance().getJobs()->removeFinishedJobs();
     std::string arg[22];
     std::string sigNum;
-    int amount= numOfWords(cmdLine,arg);
+    numOfWords(cmdLine,arg);
     try
     {
         if (arg[1][0] == '-')
         {
             sigNum = arg[1].substr(1, arg[1].length() - 1);
         }
-        if(amount>2 && arg[2].find('-')<arg[2].length())
+        if(arg[2].find('-') < arg[2].length())
         {
             std::string errorMessage = "smash error: kill: job-id " + arg[2] + " does not exist";
             cerr<<errorMessage<<endl;
