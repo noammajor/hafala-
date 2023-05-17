@@ -1212,9 +1212,9 @@ void GetFileTypeCommand::execute()
 {
     std::string output;
     std::string argTable[22];
-    numOfWords(cmdLine,argTable)
+    numOfWords(cmdLine,argTable);
     struct stat stat_buf;
-    if(lstat(argTable[1],&stat_buf))
+    if(lstat(argTable[1].c_str(), &stat_buf))
     {
         perror("smash error: lstat: invalid arguments");
         return;
