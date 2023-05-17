@@ -697,7 +697,6 @@ bool ForegroundCommand::IsLegal()
         }
         catch (exception &e) {
             cerr<<"smash error: fg: invalid arguments"<<endl;
-            return false;
         }
     }
     else if (argsCount == 1)
@@ -771,7 +770,6 @@ void ForegroundCommand::execute()
         if(waitpid(jobPid, &status, WUNTRACED)==-1)
         {
             perror("smash error: waitpid failed");
-            return;
         }
     }
     else
@@ -1204,12 +1202,7 @@ bool GetFileTypeCommand::IsLegal()
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>2)
     {
-        cerr<<"smash error: gettype: invalid arguments"<<endl;
-        return false;
-    }
-    if (!is_file_exist(argTable[1].c_str()))
-    {
-        cerr<<"smash error: gettype: invalid arguments"<<endl;
+        cerr<<"smash error: getfiletype: invalid aruments"<<endl;
         return false;
     }
     return true;
@@ -1219,18 +1212,9 @@ void GetFileTypeCommand::execute()
 {
     std::string output;
     std::string argTable[22];
-    if(numOfWords(cmdLine,argTable)>2)
-    {
-        cerr<<"smash error: gettype: invalid arguments"<<endl;
-        return;
-    }
-    if (!is_file_exist(argTable[1].c_str()))
-    {
-        cout << "not exist " << argTable[1].c_str() << endl;
-        return;
-    }
+    numOfWords(cmdLine,argTable)
     struct stat stat_buf;
-    if(lstat(argTable[1].c_str(), &stat_buf))
+    if(lstat(argTable[1],&stat_buf))
     {
         perror("smash error: lstat: invalid arguments");
         return;
