@@ -227,7 +227,6 @@ void Command::cleanup()
         }
         exit(0);
     }
-
 }
 
 
@@ -1222,7 +1221,12 @@ void GetFileTypeCommand::execute()
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>2)
     {
-        cerr<<"smash error: gettype: invalid aruments"<<endl;
+        cerr<<"smash error: gettype: invalid arguments"<<endl;
+        return;
+    }
+    if (!is_file_exist(argTable[1].c_str()))
+    {
+        cout << "not exist " << argTable[1].c_str() << endl;
         return;
     }
     struct stat stat_buf;
@@ -1281,6 +1285,11 @@ bool ChmodCommand::IsLegal()
         cerr<<"smash error: chmod: invalid arguments"<<endl;
         return false;
     }
+    if(argTable[1].length()>4)
+    {
+        cerr<<"smash error: chmod: invalid arguments"<<endl;
+        return false;
+    }
     struct stat sb;
     if (stat(argTable[2].c_str(), &sb) != 0)
     {
@@ -1295,7 +1304,15 @@ void ChmodCommand::execute()
     std::string argTable[22];
     numOfWords(cmdLine,argTable);
     const char* filename =  argTable[2].c_str();
-    int permissions = std::stoi(argTable[1], nullptr, 8);
+    try
+    {
+        int permissions = std::stoi(argTable[1], nullptr, 8);
+    }
+    catch (...)
+    {
+        cerr<<"smash error: chmod: invalid arguments"<<endl;
+        return;
+    }
     int result = chmod(filename, permissions);
     if(result < 0)
     {
