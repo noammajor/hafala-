@@ -187,7 +187,6 @@ const char* removeTimeout(const char* cmd_line)
             break;
     }
     string result = cmd_s.substr(i, cmd_s.length());
-    //cout << result << " before return" << endl;
     const char* res = result.c_str();
     return res;
 }
@@ -196,45 +195,6 @@ string findCommand(const char* cmd_line)
 {
     string line = _trim(cmd_line);
     string command = "";
-    /*string timeout = "timeout";
-    int i = 0;
-    for (; i < (int)line.length() && i < (int)timeout.length() ; i++)
-    {
-        if (line[i] != timeout[i])
-            break;
-    }
-    if (i != (int)timeout.length())
-        i = 0;
-    else
-    {
-        if (line[i] != ' ')
-        {
-            i = 0;
-        }
-        for (;  i < (int)line.length() ; i++)
-        {
-            if (!strcmp(&line[i], " "))
-                break;
-        }
-        if (!isdigit(line[i]))
-        {
-            i = 0;
-        }
-        for (;  i < (int)line.length() ; i++)
-        {
-            if (!isdigit(line[i]))
-                break;
-        }
-        if (line[i] != ' ')
-        {
-            i = 0;
-        }
-        for (;  i < (int)line.length() ; i++)
-        {
-            if (!strcmp(&line[i], " "))
-                break;
-        }
-    }*/
     for (int i = 0 ; i != (int)line.length() && isalpha(line[i]) ; i++)
         command += line[i];
     return command;
@@ -738,6 +698,7 @@ bool ForegroundCommand::IsLegal()
         }
         catch (exception &e) {
             cerr<<"smash error: fg: invalid arguments"<<endl;
+            return false;
         }
     }
     else if (argsCount == 1)
@@ -782,12 +743,14 @@ void ForegroundCommand::execute()
                 if (errno != ECHILD)
                 {
                     perror("smash error: waitpid failed");
+                    return;
                 }
             }
         }
         catch (exception &e)
         {
             cerr<<"smash error: fg: invalid arguments"<<endl;
+            return;
         }
     }
     else if (argsCount == 1)
@@ -795,7 +758,7 @@ void ForegroundCommand::execute()
         JobsList::JobEntry* job = jobs->getLastJob();
         if (!job)
         {
-            cerr<<"jobs list is empty"<<endl;
+            cerr<<"smash error: fg: jobs list is empty"<<endl;
             return;
         }
         jobs->removeJobById(job->getJobId());
@@ -809,6 +772,7 @@ void ForegroundCommand::execute()
         if(waitpid(jobPid, &status, WUNTRACED)==-1)
         {
             perror("smash error: waitpid failed");
+            return;
         }
     }
     else
@@ -1241,7 +1205,12 @@ bool GetFileTypeCommand::IsLegal()
     std::string argTable[22];
     if(numOfWords(cmdLine,argTable)>2)
     {
-        cerr<<"smash error: gettype: invalid aruments"<<endl;
+        cerr<<"smash error: gettype: invalid arguments"<<endl;
+        return false;
+    }
+    if (!is_file_exist(argTable[1].c_str()))
+    {
+        cerr<<"smash error: gettype: invalid arguments"<<endl;
         return false;
     }
     return true;
@@ -1256,13 +1225,8 @@ void GetFileTypeCommand::execute()
         cerr<<"smash error: gettype: invalid aruments"<<endl;
         return;
     }
-    if (!is_file_exist(argTable[1].c_str()))
-    {
-        cout << "not exist " << argTable[1].c_str() << endl;
-        return;
-    }
     struct stat stat_buf;
-    if(lstat(argTable[1].c_str(),&stat_buf))
+    if(lstat(argTable[1].c_str(), &stat_buf))
     {
         perror("smash error: lstat: invalid arguments");
         return;
